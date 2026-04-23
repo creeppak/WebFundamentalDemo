@@ -163,7 +163,7 @@ Each job:
 - Validate holdings before sell (no short-selling in demo).
 - Validate cash balance before buy.
 - Use the **most recent price in the DB** for trades — don't call external APIs on the trade path.
-- Every trade writes a `transactions` row. Portfolio state is derived from transactions, not stored as mutable balances (or, if stored, kept in sync inside a DB transaction).
+- Every trade writes a `transactions` row. Portfolio state — both stock holdings and cash balance — is always **derived from the transaction log**, never stored as a separate column or table. Cash balance is the sum of `Deposit` transactions minus the cost of all `Buy` transactions plus proceeds of all `Sell` transactions. Do not add a `CashBalance` column to `User` or a `holdings` table.
 
 ## Frontend (Blazor WASM)
 
