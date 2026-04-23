@@ -8,6 +8,9 @@
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.13" />
     <!-- Worker -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <!-- Data access -->
+    <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.13" />
     <!-- API -->
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="6.6.2" />
     <!-- Test -->
