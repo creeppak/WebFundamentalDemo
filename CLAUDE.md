@@ -28,11 +28,11 @@ Blazor client → ASP.NET API → Postgres (reads cached data)
 ## Tech Stack
 
 - **.NET 8** / C# (ASP.NET Core, Blazor WebAssembly, Worker Service)
-- **PostgreSQL** + EF Core (Npgsql provider) — containerized, single Fargate task with EFS-mounted volume for data persistence
+- **PostgreSQL** + EF Core (Npgsql provider) — containerized, single Cloud Run instance with Filestore-mounted volume for data persistence
 - **Hangfire** for job scheduling (Postgres-backed storage, isolated schema)
 - Docker + Docker Compose for local dev
-- **AWS Fargate** deployment (ECS Fargate, ECR, ALB, Secrets Manager, EFS for Postgres data, EventBridge Scheduler for Worker task)
-- GitHub Actions for CI/CD (OIDC auth to AWS)
+- **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud Load Balancing, Secret Manager, Filestore for Postgres data, Cloud Scheduler for Worker job)
+- GitHub Actions for CI/CD (Workload Identity Federation auth to GCP)
 - **Anthropic Claude API** for analysis generation (`claude-sonnet-4-20250514`)
 - **Finnhub** for market data (fundamentals, prices, news)
 
@@ -84,14 +84,14 @@ dotnet test
 - Transactions for multi-step operations (e.g. buy = deduct cash + insert transaction row + update holding must be atomic). Use `IDbContextTransaction`.
 - **Hangfire uses a separate Postgres schema** (`hangfire`) to keep its tables out of EF Core migrations.
 - **Migration ownership:** the `Api` project owns migrations. The `Worker` reads and writes data but does not run migrations.
-- **Do not run migrations from Api startup in production.** Run them as a one-off ECS task before deploying a new Api version. Multiple Api instances racing on startup corrupts migration history.
-- **Postgres runs in a single Fargate task with EFS-mounted data directory.** This means only one Postgres instance may be running at a time — the ECS service must be configured with `desiredCount=1` and `maximumPercent=100` (no rolling updates that would briefly run two). Deployments take Postgres offline for ~30s.
-- EFS has higher latency than local disk. Acceptable for demo scale; do not benchmark this against RDS.
+- **Do not run migrations from Api startup in production.** Run them as a one-off Cloud Run Job before deploying a new Api revision. Multiple Api instances racing on startup corrupts migration history.
+- **Postgres runs in a single Cloud Run instance with Filestore-mounted data directory.** This means only one Postgres instance may be running at a time — the Cloud Run service must be configured with `minInstances=1`, `maxInstances=1` (no concurrent revisions that would briefly run two). Deployments take Postgres offline for ~30s.
+- Filestore has higher latency than local disk. Acceptable for demo scale; do not benchmark this against Cloud SQL.
 
 ## Authentication
 
 - ASP.NET Identity for user management, JWT for API auth.
-- JWTs signed with a key from AWS Secrets Manager in prod, user secrets locally.
+- JWTs signed with a key from GCP Secret Manager in prod, user secrets locally.
 - **Never** store JWTs in `localStorage` in Blazor WASM — use `sessionStorage` or in-memory with a refresh token flow.
 - Access tokens short-lived (15 min), refresh tokens longer (7 days), rotated on use.
 - Every non-public endpoint requires `[Authorize]`. Audit this on every PR — it's easy to forget.
@@ -99,7 +99,7 @@ dotnet test
 ## Market Data (Finnhub)
 
 - One `IMarketDataProvider` interface, `FinnhubMarketDataProvider` as the concrete implementation. Keep the interface provider-agnostic so swapping providers is possible.
-- API key in user secrets locally, AWS Secrets Manager in prod. Fail fast at startup if missing.
+- API key in user secrets locally, GCP Secret Manager in prod. Fail fast at startup if missing.
 - Use `IHttpClientFactory` with a named/typed client for Finnhub. Never `new HttpClient()`.
 - Wrap every Finnhub call in **Polly** policies: retry with exponential backoff on 5xx + timeouts, circuit breaker on sustained failures.
 - **Handle HTTP 429 (rate limit) explicitly** — back off, do not retry immediately. Finnhub's free tier is 60 req/min, which is plenty for a 10-ticker nightly job but easy to trip during debugging.
@@ -110,7 +110,7 @@ dotnet test
 
 ## Claude API Integration
 
-- API key stored in AWS Secrets Manager (prod) or user secrets (local). Never in `appsettings.json`, never in code.
+- API key stored in GCP Secret Manager (prod) or user secrets (local). Never in `appsettings.json`, never in code.
 - Use `claude-sonnet-4-20250514` unless there's a specific reason to change.
 - **Prompt structure for the analysis job:**
   1. System role: financial analyst writing a compact daily brief
@@ -134,10 +134,10 @@ dotnet test
 - Jobs registered as recurring jobs via `RecurringJob.AddOrUpdate(...)` with cron expressions.
 - Scheduled run time: **02:00 UTC** — after US market close + news cycle settles. Document any change.
 
-**Execution model on AWS:**
+**Execution model on GCP:**
 
-- **Worker runs as an EventBridge-Scheduler-triggered Fargate task**, not an always-on service. The task starts at 02:00 UTC, runs the job chain, exits. Cheaper and more correct than keeping a process idle 23 hours a day.
-- Because the Worker is not always running, Hangfire's recurring-job scheduling is used only locally. In production, EventBridge triggers the task and it runs the jobs imperatively on startup, then shuts down.
+- **Worker runs as a Cloud Scheduler-triggered Cloud Run Job**, not an always-on service. The job starts at 02:00 UTC, runs the job chain, exits. Cheaper and more correct than keeping a process idle 23 hours a day.
+- Because the Worker is not always running, Hangfire's recurring-job scheduling is used only locally. In production, Cloud Scheduler triggers the Cloud Run Job and it runs the jobs imperatively on startup, then shuts down.
 - Local dev: Hangfire runs as an always-on service inside the Worker container, scheduling itself.
 
 **Job order (strict):**
@@ -180,26 +180,26 @@ Each job:
 - Don't run as root in the final image.
 - `.dockerignore` must exclude `bin/`, `obj/`, `.git/`, local secrets.
 
-## AWS Deployment Shape
+## GCP Deployment Shape
 
-- **Compute:** ECS Fargate for all services.
+- **Compute:** Cloud Run for all services.
 - **Services:**
-  - `Api` — ECS service, `desiredCount>=1`, behind ALB, public HTTPS.
-  - `Web` (Blazor WASM static files) — served from a minimal Nginx container in its own ECS service behind the same or separate ALB target group. (Alternative: S3 + CloudFront for cheaper static hosting — defer this choice, but know it's an option.)
-  - `Postgres` — ECS service, `desiredCount=1`, `maximumPercent=100`, EFS-mounted data directory. **No rolling updates.** Deployment briefly takes Postgres offline.
-  - `Worker` — **not an ECS service.** Triggered by EventBridge Scheduler as a `RunTask` at 02:00 UTC. Runs the job chain and exits.
-- **Networking:** VPC with public and private subnets across two AZs. ALB in public subnets, all ECS tasks in private subnets. Postgres security group allows traffic only from Api and Worker security groups.
-- **Secrets:** AWS Secrets Manager for DB password, JWT signing key, Anthropic API key, Finnhub API key. Task roles grant each service access to only its own secrets.
-- **Logs:** CloudWatch Logs per service, retention 7–14 days (demo cost).
-- **Billing alarm** at $20/month. Non-negotiable — catches misconfigurations before they're expensive.
-- **Infrastructure-as-code:** AWS CDK in C# keeps the stack in the same language as the app. Do not provision AWS resources by hand in the console beyond the initial account bootstrap.
+  - `Api` — Cloud Run service, `minInstances>=1`, behind Cloud Load Balancing, public HTTPS.
+  - `Web` (Blazor WASM static files) — served from a minimal Nginx container as its own Cloud Run service behind the load balancer. (Alternative: Cloud Storage + Cloud CDN for cheaper static hosting — defer this choice, but know it's an option.)
+  - `Postgres` — Cloud Run service, `minInstances=1`, `maxInstances=1`, Filestore-mounted data directory. **No rolling updates.** Deployment briefly takes Postgres offline.
+  - `Worker` — **not a Cloud Run service.** Triggered by Cloud Scheduler as a Cloud Run Job at 02:00 UTC. Runs the job chain and exits.
+- **Networking:** VPC with public and private subnets. Load balancer in public subnet, all Cloud Run services in private subnet via VPC connector. Postgres firewall rules allow traffic only from Api and Worker service accounts.
+- **Secrets:** GCP Secret Manager for DB password, JWT signing key, Anthropic API key, Finnhub API key. Service accounts grant each service access to only its own secrets.
+- **Logs:** Cloud Logging per service, retention 7–14 days (demo cost).
+- **Billing alert** at $20/month. Non-negotiable — catches misconfigurations before they're expensive.
+- **Infrastructure-as-code:** Pulumi in C# keeps the stack in the same language as the app. Do not provision GCP resources by hand in the console beyond the initial project bootstrap.
 
 ## CI/CD
 
-- PR workflow: restore, build, test. No AWS access needed.
-- Main branch workflow: build, test, build Docker images tagged with Git SHA + `latest`, push to ECR.
-- Deploy workflow: run EF Core migrations as a **one-off ECS task** before updating the Api service. Do not run migrations from Api startup.
-- AWS credentials via **OIDC** (GitHub → AWS role assumption). No long-lived access keys in GitHub Secrets.
+- PR workflow: restore, build, test. No GCP access needed.
+- Main branch workflow: build, test, build Docker images tagged with Git SHA + `latest`, push to Artifact Registry.
+- Deploy workflow: run EF Core migrations as a **one-off Cloud Run Job** before updating the Api service. Do not run migrations from Api startup.
+- GCP credentials via **Workload Identity Federation** (GitHub → GCP service account impersonation). No long-lived service account keys in GitHub Secrets.
 - Manual approval gate before production deploy.
 - Tag images with both Git SHA (immutable, for rollback) and `latest` (convenience).
 - Keep a written rollback runbook — how to redeploy a previous image tag.
@@ -207,7 +207,7 @@ Each job:
 ## Secrets & Configuration
 
 - Local: .NET user secrets (`dotnet user-secrets`)
-- Prod: AWS Secrets Manager, loaded at container startup
+- Prod: GCP Secret Manager, loaded at container startup
 - **Never** commit `appsettings.Production.json` with real values
 - **Never** hardcode API keys, connection strings, or JWT signing keys
 

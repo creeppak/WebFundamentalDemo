@@ -21,8 +21,8 @@ A virtual stock trading demo platform. Users register, receive a virtual cash ba
 - PostgreSQL + EF Core (Npgsql)
 - Hangfire (job scheduling, local dev)
 - Docker / Docker Compose
-- AWS Fargate + ECR + ALB + Secrets Manager + EFS
-- GitHub Actions (CI/CD, OIDC auth to AWS)
+- GCP Cloud Run + Artifact Registry + Cloud Load Balancing + Secret Manager + Filestore
+- GitHub Actions (CI/CD, Workload Identity Federation auth to GCP)
 - Anthropic Claude API (`claude-sonnet-4-20250514`)
 - Finnhub (market data)
 
@@ -81,14 +81,14 @@ dotnet test
 
 ## Deployment
 
-Deployed to AWS Fargate. See `infra/` for CDK stack (C#).
+Deployed to GCP Cloud Run. See `infra/` for Pulumi stack (C#).
 
-- **Api** — ECS service behind ALB, public HTTPS
+- **Api** — Cloud Run service behind Cloud Load Balancing, public HTTPS
 - **Web** — Nginx container serving Blazor WASM static files
-- **Postgres** — ECS service, single task, EFS-mounted data directory
-- **Worker** — EventBridge Scheduler triggers a RunTask at 02:00 UTC nightly
+- **Postgres** — Cloud Run service, single instance, Filestore-mounted data directory
+- **Worker** — Cloud Scheduler triggers a Cloud Run Job at 02:00 UTC nightly
 
-CI/CD via GitHub Actions (OIDC, no long-lived keys). Migrations run as a one-off ECS task before Api deploy.
+CI/CD via GitHub Actions (Workload Identity Federation, no long-lived keys). Migrations run as a one-off Cloud Run Job before Api deploy.
 
 ## License
 
