@@ -1,3 +1,3 @@
 namespace Api.Auth;
 
-public record AuthResponse(string AccessToken, DateTime ExpiresAt);
+public record AuthResponse(string AccessToken, string RefreshToken, DateTime ExpiresAt);

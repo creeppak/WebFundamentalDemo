@@ -46,6 +46,7 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: ["db"]);
 
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

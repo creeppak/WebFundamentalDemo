@@ -7,6 +7,7 @@ namespace Infrastructure.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options)
     : IdentityUserContext<User, Guid>(options)
 {
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

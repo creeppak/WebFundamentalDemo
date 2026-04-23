@@ -1,22 +1,30 @@
 using Api.Auth;
-using Infrastructure.Domain;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-public class AuthController(UserManager<User> userManager, ITokenService tokenService) : ControllerBase
+public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("login")]
-    public async Task<IActionResult> Login(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
-        var user = await userManager.FindByEmailAsync(request.Email);
-        if (user is null || !await userManager.CheckPasswordAsync(user, request.Password))
-            return Unauthorized();
+        var response = await authService.LoginAsync(request.Email, request.Password, ct);
+        return response is null ? Unauthorized() : Ok(response);
+    }
 
-        var (token, expiresAt) = tokenService.GenerateAccessToken(user);
-        return Ok(new AuthResponse(token, expiresAt));
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh(RefreshRequest request, CancellationToken ct)
+    {
+        var response = await authService.RefreshAsync(request.RefreshToken, ct);
+        return response is null ? Unauthorized() : Ok(response);
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout(LogoutRequest request, CancellationToken ct)
+    {
+        await authService.RevokeAsync(request.RefreshToken, ct);
+        return NoContent();
     }
 }
