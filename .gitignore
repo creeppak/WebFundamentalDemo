@@ -1,0 +1,56 @@
+# Build outputs
+bin/
+obj/
+out/
+
+# NuGet
+packages/
+*.nupkg
+*.snupkg
+.nuget/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+*.DotSettings.user
+
+# Rider
+/_ReSharper.Caches/
+riderModule.iml
+
+# Visual Studio Code
+.vscode/
+
+# .NET user secrets (local dev secrets — never commit)
+**/secrets.json
+**/appsettings.*.local.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+
+# Test results
+TestResults/
+coverage/
+*.coveragexml
+*.trx
+
+# Publish output
+publish/
+**/Properties/PublishProfiles/
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
