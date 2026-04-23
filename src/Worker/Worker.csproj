@@ -5,6 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.PostgreSql" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
   </ItemGroup>
 
