@@ -20,6 +20,7 @@ A virtual stock trading demo platform. Users register, receive a virtual cash ba
 - .NET 8 / C# (ASP.NET Core, Blazor WASM, Worker Service)
 - PostgreSQL + EF Core (Npgsql)
 - Hangfire (job scheduling, local dev)
+- Mapperly (compile-time DTO↔domain mapping)
 - Docker / Docker Compose
 - GCP Cloud Run + Artifact Registry + Cloud Load Balancing + Secret Manager + Filestore
 - GitHub Actions (CI/CD, Workload Identity Federation auth to GCP)

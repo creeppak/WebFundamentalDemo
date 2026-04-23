@@ -30,6 +30,7 @@ Blazor client → ASP.NET API → Postgres (reads cached data)
 - **.NET 8** / C# (ASP.NET Core, Blazor WebAssembly, Worker Service)
 - **PostgreSQL** + EF Core (Npgsql provider) — containerized, single Cloud Run instance with Filestore-mounted volume for data persistence
 - **Hangfire** for job scheduling (Postgres-backed storage, isolated schema)
+- **Mapperly** for compile-time DTO↔domain object mapping
 - Docker + Docker Compose for local dev
 - **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud Load Balancing, Secret Manager, Filestore for Postgres data, Cloud Scheduler for Worker job)
 - GitHub Actions for CI/CD (Workload Identity Federation auth to GCP)
@@ -74,6 +75,7 @@ dotnet test
 - **DTOs at API boundaries.** Never expose EF entities directly in API responses.
 - **Records for DTOs**, classes for entities.
 - **FluentValidation** for request validation, not data annotations on DTOs.
+- **Mapperly** for all DTO↔domain object mapping (both directions). Never write hand-rolled mapping code — add a partial mapper class annotated with `[Mapper]` in the relevant project. Mappers live in a `Mappers/` folder next to the types they map.
 - **Nullable reference types enabled.** Don't disable to silence warnings — fix the nullability.
 
 ## Database
