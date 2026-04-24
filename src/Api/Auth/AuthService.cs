@@ -99,6 +99,6 @@ public class AuthService(
         });
 
         await dbContext.SaveChangesAsync(ct);
-        return new AuthResponse(accessToken, rawRefreshToken, expiresAt);
+        return new AuthResponse(accessToken, rawRefreshToken, expiresAt, refreshExpiresAt);
     }
 }
