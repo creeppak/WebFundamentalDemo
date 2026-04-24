@@ -18,6 +18,9 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
 
+var blazorOrigin = builder.Configuration["Cors:AllowedOrigin"]
+    ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
@@ -44,6 +47,15 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy => policy
+        .WithOrigins(blazorOrigin)
+        .AllowAnyMethod()
+        .AllowAnyHeader()
+        .AllowCredentials());
+});
 
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: ["db"]);
@@ -99,6 +111,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseForwardedHeaders();
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
