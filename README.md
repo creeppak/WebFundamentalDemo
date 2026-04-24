@@ -60,9 +60,9 @@ docker compose up --build
 Use .NET user secrets — never commit API keys:
 
 ```bash
-dotnet user-secrets set "Anthropic:ApiKey" "<key>" --project src/Api
-dotnet user-secrets set "Finnhub:ApiKey" "<key>" --project src/Api
-dotnet user-secrets set "Jwt:SigningKey" "<key>" --project src/Api
+dotnet user-secrets set "Jwt:SigningKey"     "<key>" --project src/Api
+dotnet user-secrets set "Anthropic:ApiKey"  "<key>" --project src/Worker
+dotnet user-secrets set "Finnhub:ApiKey"    "<key>" --project src/Worker
 ```
 
 ### Migrations
@@ -79,6 +79,25 @@ Always review generated migrations before committing.
 ```bash
 dotnet test
 ```
+
+## Market Data — Finnhub
+
+Market data (prices, fundamentals, news) is fetched from [Finnhub](https://finnhub.io) by the nightly Worker job.
+
+**Free-tier limits:** 60 API calls per minute.
+
+| Nightly job | Calls per ticker | 10 tickers |
+|---|---|---|
+| `PriceSyncJob` | 1 | 10 |
+| `FundamentalsSyncJob` | 1 | 10 |
+| `NewsSyncJob` | 1 | 10 |
+| **Total** | **3** | **30** |
+
+30 calls per nightly run is well within the 60 req/min limit. The limit is easy to trip during **manual debugging** — repeated job triggers or tight loops will hit it quickly.
+
+The HTTP client handles 429 responses by waiting 60 seconds (or the `Retry-After` header value if present) and retrying once before failing. Do not add tight retry loops on top of this.
+
+**Terms of Service:** Finnhub's free tier permits this use case. Do not redistribute raw Finnhub data or make the app publicly available at scale without reviewing their ToS.
 
 ## Deployment
 
