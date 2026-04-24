@@ -1,0 +1,3 @@
+name: webfundamentaldemo
+runtime: dotnet
+description: GCP infrastructure for WebFundamentalDemo (Cloud Run, Filestore, Secret Manager, Cloud Load Balancing, Cloud Scheduler)

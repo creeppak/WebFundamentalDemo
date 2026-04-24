@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Pulumi" Version="3.68.0" />
+    <PackageReference Include="Pulumi.Gcp" Version="7.29.0" />
+  </ItemGroup>
+
+</Project>

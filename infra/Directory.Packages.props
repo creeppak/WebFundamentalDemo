@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Infra manages its own package versions independently of the main solution. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>
