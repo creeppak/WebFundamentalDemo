@@ -5,6 +5,7 @@ using Infrastructure.Data;
 using Infrastructure.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -47,6 +48,16 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: ["db"]);
 
+// Trust X-Forwarded-For from the GCP load balancer. Safe because Cloud Run services are
+// behind the VPC connector and cannot be reached from the internet directly.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // Clear defaults so all upstream proxies are trusted (enforced by network topology, not IP allowlist).
+    options.KnownNetworks.Clear();
+    options.KnownProxies.Clear();
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -86,6 +97,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseForwardedHeaders();
 app.UseHttpsRedirection();
 app.UseRateLimiter();
 app.UseAuthentication();
