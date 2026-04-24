@@ -1,5 +1,6 @@
 using Api.Auth;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Api.Controllers;
 
@@ -8,6 +9,7 @@ namespace Api.Controllers;
 public class AuthController(IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]
+    [EnableRateLimiting(AuthRateLimitPolicies.Register)]
     public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
     {
         var result = await authService.RegisterAsync(request.Email, request.Password, ct);
@@ -15,6 +17,7 @@ public class AuthController(IAuthService authService) : ControllerBase
     }
 
     [HttpPost("login")]
+    [EnableRateLimiting(AuthRateLimitPolicies.Login)]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
         var response = await authService.LoginAsync(request.Email, request.Password, ct);

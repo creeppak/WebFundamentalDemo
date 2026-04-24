@@ -1,9 +1,11 @@
 using System.Text;
+using System.Threading.RateLimiting;
 using Api.Auth;
 using Infrastructure.Data;
 using Infrastructure.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 
@@ -45,6 +47,29 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: ["db"]);
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    static FixedWindowRateLimiterOptions WindowOptions(IConfiguration cfg, string key) => new()
+    {
+        PermitLimit = cfg.GetValue<int>($"RateLimiting:{key}:PermitLimit"),
+        Window = TimeSpan.FromSeconds(cfg.GetValue<int>($"RateLimiting:{key}:WindowSeconds")),
+        QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+        QueueLimit = 0,
+    };
+
+    options.AddPolicy(AuthRateLimitPolicies.Login, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => WindowOptions(builder.Configuration, "Login")));
+
+    options.AddPolicy(AuthRateLimitPolicies.Register, context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => WindowOptions(builder.Configuration, "Register")));
+});
+
 builder.Services.Configure<RegistrationOptions>(builder.Configuration.GetSection("Registration"));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
@@ -62,6 +87,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
