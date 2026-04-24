@@ -1,6 +1,8 @@
 using Hangfire;
 using Hangfire.PostgreSql;
 using Worker;
+using Worker.Analysis;
+using Worker.Analysis.Claude;
 using Worker.MarketData;
 using Worker.MarketData.Finnhub;
 
@@ -11,6 +13,9 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 
 var finnhubApiKey = builder.Configuration["Finnhub:ApiKey"]
     ?? throw new InvalidOperationException("Finnhub:ApiKey is not configured.");
+
+var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
+    ?? throw new InvalidOperationException("Anthropic:ApiKey is not configured.");
 
 builder.Services.AddHttpClient<FinnhubHttpClient>((_, client) =>
 {
@@ -23,6 +28,16 @@ builder.Services.AddHttpClient<FinnhubHttpClient>((_, client) =>
 .AddPolicyHandler(FinnhubPolicies.CircuitBreakerPolicy);
 
 builder.Services.AddScoped<IMarketDataProvider, FinnhubMarketDataProvider>();
+
+builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
+{
+    client.BaseAddress = new Uri("https://api.anthropic.com/");
+    client.DefaultRequestHeaders.Add("x-api-key", anthropicApiKey);
+    client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
+})
+.AddPolicyHandler(AnthropicPolicies.RetryPolicy);
+
+builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
 
 builder.Services.AddHangfire(config => config
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
