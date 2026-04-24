@@ -45,6 +45,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>(tags: ["db"]);
 
+builder.Services.Configure<RegistrationOptions>(builder.Configuration.GetSection("Registration"));
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 

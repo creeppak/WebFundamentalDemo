@@ -2,14 +2,50 @@ using Infrastructure.Data;
 using Infrastructure.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace Api.Auth;
 
 public class AuthService(
     UserManager<User> userManager,
     ITokenService tokenService,
-    AppDbContext dbContext) : IAuthService
+    AppDbContext dbContext,
+    IOptions<RegistrationOptions> registrationOptions) : IAuthService
 {
+    private readonly RegistrationOptions _registrationOptions = registrationOptions.Value;
+
+    public async Task<RegisterResult> RegisterAsync(string email, string password, CancellationToken ct)
+    {
+        var user = new User { UserName = email, Email = email };
+
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+        try
+        {
+            var identityResult = await userManager.CreateAsync(user, password);
+            if (!identityResult.Succeeded)
+                return new RegisterResult(false, identityResult.Errors.Select(e => e.Description));
+
+            dbContext.Transactions.Add(new Transaction
+            {
+                Id = Guid.NewGuid(),
+                UserId = user.Id,
+                TransactionType = TransactionType.Deposit,
+                Price = 0m,
+                Quantity = _registrationOptions.InitialDepositAmount,
+            });
+
+            await dbContext.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+
+            return new RegisterResult(true, []);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(ct);
+            throw;
+        }
+    }
+
     public async Task<AuthResponse?> LoginAsync(string email, string password, CancellationToken ct)
     {
         var user = await userManager.FindByEmailAsync(email);

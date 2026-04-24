@@ -7,6 +7,13 @@ namespace Api.Controllers;
 [Route("api/auth")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterRequest request, CancellationToken ct)
+    {
+        var result = await authService.RegisterAsync(request.Email, request.Password, ct);
+        return result.Succeeded ? Created() : BadRequest(result.Errors);
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request, CancellationToken ct)
     {
