@@ -17,6 +17,8 @@ builder.Services.AddHttpClient<FinnhubHttpClient>((_, client) =>
     client.BaseAddress = new Uri("https://finnhub.io/api/v1/");
     client.DefaultRequestHeaders.Add("X-Finnhub-Token", finnhubApiKey);
 })
+.AddPolicyHandler((sp, _) => FinnhubPolicies.CreateRateLimitPolicy(
+    sp.GetRequiredService<ILogger<FinnhubHttpClient>>()))
 .AddPolicyHandler(FinnhubPolicies.RetryPolicy)
 .AddPolicyHandler(FinnhubPolicies.CircuitBreakerPolicy);
 

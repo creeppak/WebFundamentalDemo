@@ -1,3 +1,5 @@
+using System.Net;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Extensions.Http;
 
@@ -17,4 +19,21 @@ internal static class FinnhubPolicies
             .CircuitBreakerAsync(
                 handledEventsAllowedBeforeBreaking: 5,
                 durationOfBreak: TimeSpan.FromMinutes(1));
+
+    // Not static readonly — stateless, and needs a logger. One retry after back-off is enough;
+    // if Finnhub is still rate-limiting after 60s, something unusual is happening.
+    internal static IAsyncPolicy<HttpResponseMessage> CreateRateLimitPolicy(ILogger logger) =>
+        Policy<HttpResponseMessage>
+            .HandleResult(r => r.StatusCode == HttpStatusCode.TooManyRequests)
+            .WaitAndRetryAsync(
+                retryCount: 1,
+                sleepDurationProvider: (_, outcome, _) =>
+                    outcome.Result?.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(60),
+                onRetryAsync: (outcome, delay, _, _) =>
+                {
+                    logger.LogWarning(
+                        "Finnhub rate limit hit (429). Backing off for {Seconds}s before retry",
+                        delay.TotalSeconds);
+                    return Task.CompletedTask;
+                });
 }
