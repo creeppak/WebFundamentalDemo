@@ -35,6 +35,8 @@ builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
     client.DefaultRequestHeaders.Add("x-api-key", anthropicApiKey);
     client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
 })
+.AddPolicyHandler((sp, _) => AnthropicPolicies.CreateRateLimitPolicy(
+    sp.GetRequiredService<ILogger<AnthropicHttpClient>>()))
 .AddPolicyHandler(AnthropicPolicies.RetryPolicy);
 
 builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
