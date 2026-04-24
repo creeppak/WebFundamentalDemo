@@ -213,6 +213,10 @@ Each job:
 - **Never** commit `appsettings.Production.json` with real values
 - **Never** hardcode API keys, connection strings, or JWT signing keys
 
+## Git Conventions
+
+- Do **not** include `Co-Authored-By: Claude` in commit messages.
+
 ## What Claude Should NOT Do
 
 - Do not add LLM calls to the API request path. Analyses are pre-generated.
