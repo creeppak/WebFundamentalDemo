@@ -22,48 +22,94 @@ public class AnalysisGenerationJob(
 
     public async Task ExecuteAsync(CancellationToken ct)
     {
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        if (!await IsWithinMonthlyBudgetAsync(today, ct))
-            return;
-
-        var tickers = await db.Stocks.Select(s => s.Ticker).ToListAsync(ct);
-
-        if (tickers.Count == 0)
+        var jobRun = new JobRun
         {
-            logger.LogWarning("AnalysisGenerationJob: no tickers in stocks table — skipping");
-            return;
-        }
-
-        logger.LogInformation(
-            "AnalysisGenerationJob starting: {TickerCount} tickers", tickers.Count);
+            JobName   = nameof(AnalysisGenerationJob),
+            StartedAt = DateTime.UtcNow,
+            Status    = JobRunStatus.Running,
+        };
+        db.JobRuns.Add(jobRun);
+        await db.SaveChangesAsync(ct);
 
         var synced = 0;
         var failed = 0;
+        long totalInputTokens  = 0;
+        long totalOutputTokens = 0;
 
-        foreach (var ticker in tickers)
+        try
         {
-            ct.ThrowIfCancellationRequested();
-            try
-            {
-                await GenerateForTickerAsync(ticker, today, ct);
-                synced++;
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "AnalysisGenerationJob failed for {Ticker}", ticker);
-                failed++;
-            }
-        }
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        logger.LogInformation(
-            "AnalysisGenerationJob complete: {Synced} succeeded, {Failed} failed",
-            synced, failed);
+            if (!await IsWithinMonthlyBudgetAsync(today, ct))
+            {
+                jobRun.Status = JobRunStatus.Succeeded;
+                return;
+            }
+
+            var tickers = await db.Stocks.Select(s => s.Ticker).ToListAsync(ct);
+
+            if (tickers.Count == 0)
+            {
+                logger.LogWarning("AnalysisGenerationJob: no tickers in stocks table — skipping");
+            }
+            else
+            {
+                logger.LogInformation(
+                    "AnalysisGenerationJob starting: {TickerCount} tickers", tickers.Count);
+
+                foreach (var ticker in tickers)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    try
+                    {
+                        var tokens = await GenerateForTickerAsync(ticker, today, ct);
+                        if (tokens is not null)
+                        {
+                            totalInputTokens  += tokens.Value.inputTokens;
+                            totalOutputTokens += tokens.Value.outputTokens;
+                        }
+                        synced++;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogError(ex, "AnalysisGenerationJob failed for {Ticker}", ticker);
+                        failed++;
+                    }
+                }
+
+                logger.LogInformation(
+                    "AnalysisGenerationJob complete: {Synced} succeeded, {Failed} failed, {InputTokens}+{OutputTokens} tokens",
+                    synced, failed, totalInputTokens, totalOutputTokens);
+            }
+
+            jobRun.Status = JobRunStatus.Succeeded;
+        }
+        catch (OperationCanceledException)
+        {
+            jobRun.Status       = JobRunStatus.Failed;
+            jobRun.ErrorMessage = "Cancelled";
+            throw;
+        }
+        catch (Exception ex)
+        {
+            jobRun.Status       = JobRunStatus.Failed;
+            jobRun.ErrorMessage = ex.Message;
+            logger.LogError(ex, "AnalysisGenerationJob encountered an unhandled error");
+        }
+        finally
+        {
+            jobRun.CompletedAt         = DateTime.UtcNow;
+            jobRun.TickersSucceeded    = synced;
+            jobRun.TickersFailed       = failed;
+            jobRun.TotalInputTokens    = totalInputTokens;
+            jobRun.TotalOutputTokens   = totalOutputTokens;
+            await db.SaveChangesAsync(CancellationToken.None);
+        }
     }
 
     private async Task<bool> IsWithinMonthlyBudgetAsync(DateOnly today, CancellationToken ct)
     {
-        var monthStart = new DateOnly(today.Year, today.Month, 1);
+        var monthStart    = new DateOnly(today.Year, today.Month, 1);
         var monthlyTokens = await db.Analyses
             .Where(a => a.Date >= monthStart)
             .SumAsync(a => (long)a.InputTokens + a.OutputTokens, ct);
@@ -79,7 +125,9 @@ public class AnalysisGenerationJob(
         return true;
     }
 
-    private async Task GenerateForTickerAsync(string ticker, DateOnly today, CancellationToken ct)
+    // Returns (inputTokens, outputTokens) when generation succeeded, null when skipped/failed.
+    private async Task<(int inputTokens, int outputTokens)?> GenerateForTickerAsync(
+        string ticker, DateOnly today, CancellationToken ct)
     {
         // Read fresh data populated by the three preceding jobs.
         var prices = await db.Prices
@@ -121,9 +169,8 @@ public class AnalysisGenerationJob(
         {
             // GenerateAsync already logged the error. Keep whatever was there before.
             logger.LogWarning(
-                "AnalysisGenerationJob: no result for {Ticker} — previous analysis retained",
-                ticker);
-            return;
+                "AnalysisGenerationJob: no result for {Ticker} — previous analysis retained", ticker);
+            return null;
         }
 
         var existing = await db.Analyses
@@ -148,5 +195,7 @@ public class AnalysisGenerationJob(
         logger.LogInformation(
             "AnalysisGenerationJob: upserted analysis for {Ticker} ({Input}+{Output} tokens)",
             ticker, result.InputTokens, result.OutputTokens);
+
+        return (result.InputTokens, result.OutputTokens);
     }
 }

@@ -14,6 +14,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Fundamental> Fundamentals => Set<Fundamental>();
     public DbSet<NewsArticle> NewsArticles => Set<NewsArticle>();
     public DbSet<StockAnalysis> Analyses => Set<StockAnalysis>();
+    public DbSet<JobRun> JobRuns => Set<JobRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
