@@ -4,6 +4,7 @@ using Worker;
 using Worker.Analysis;
 using Worker.Analysis.Claude;
 using Worker.Jobs;
+using Worker.Mappers;
 using Worker.MarketData;
 using Worker.MarketData.Finnhub;
 
@@ -45,6 +46,7 @@ builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
 
 builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
 
+builder.Services.AddSingleton<JobMapper>();
 builder.Services.AddScoped<PriceSyncJob>();
 builder.Services.AddScoped<FundamentalsSyncJob>();
 

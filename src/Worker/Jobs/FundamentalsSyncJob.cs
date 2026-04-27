@@ -1,7 +1,7 @@
 using Infrastructure.Data;
-using Infrastructure.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Worker.Mappers;
 using Worker.MarketData;
 
 namespace Worker.Jobs;
@@ -9,6 +9,7 @@ namespace Worker.Jobs;
 public class FundamentalsSyncJob(
     IMarketDataProvider marketData,
     AppDbContext db,
+    JobMapper mapper,
     ILogger<FundamentalsSyncJob> logger)
 {
     public async Task ExecuteAsync(CancellationToken ct)
@@ -64,30 +65,13 @@ public class FundamentalsSyncJob(
 
         if (existing is not null)
         {
-            existing.MarketCap     = snapshot.MarketCap;
-            existing.PeRatio       = snapshot.PeRatio;
-            existing.EpsAnnual     = snapshot.EpsAnnual;
-            existing.WeekHigh52    = snapshot.WeekHigh52;
-            existing.WeekLow52     = snapshot.WeekLow52;
-            existing.DividendYield = snapshot.DividendYield;
-            existing.Sector        = snapshot.Sector;
-            existing.Industry      = snapshot.Industry;
+            mapper.UpdateFundamental(snapshot, existing);
         }
         else
         {
-            db.Fundamentals.Add(new Fundamental
-            {
-                Ticker        = ticker,
-                Date          = today,
-                MarketCap     = snapshot.MarketCap,
-                PeRatio       = snapshot.PeRatio,
-                EpsAnnual     = snapshot.EpsAnnual,
-                WeekHigh52    = snapshot.WeekHigh52,
-                WeekLow52     = snapshot.WeekLow52,
-                DividendYield = snapshot.DividendYield,
-                Sector        = snapshot.Sector,
-                Industry      = snapshot.Industry,
-            });
+            var fundamental = mapper.ToFundamental(snapshot);
+            fundamental.Date = today;
+            db.Fundamentals.Add(fundamental);
         }
 
         await db.SaveChangesAsync(ct);

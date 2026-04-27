@@ -1,7 +1,7 @@
 using Infrastructure.Data;
-using Infrastructure.Domain;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Worker.Mappers;
 using Worker.MarketData;
 
 namespace Worker.Jobs;
@@ -9,6 +9,7 @@ namespace Worker.Jobs;
 public class PriceSyncJob(
     IMarketDataProvider marketData,
     AppDbContext db,
+    JobMapper mapper,
     ILogger<PriceSyncJob> logger)
 {
     // 30 calendar days covers ~20 trading days after weekends and US holidays.
@@ -73,26 +74,9 @@ public class PriceSyncJob(
         foreach (var bar in bars)
         {
             if (existing.TryGetValue(bar.Date, out var price))
-            {
-                price.Open   = bar.Open;
-                price.High   = bar.High;
-                price.Low    = bar.Low;
-                price.Close  = bar.Close;
-                price.Volume = bar.Volume;
-            }
+                mapper.UpdatePrice(bar, price);
             else
-            {
-                db.Prices.Add(new Price
-                {
-                    Ticker = ticker,
-                    Date   = bar.Date,
-                    Open   = bar.Open,
-                    High   = bar.High,
-                    Low    = bar.Low,
-                    Close  = bar.Close,
-                    Volume = bar.Volume,
-                });
-            }
+                db.Prices.Add(mapper.ToPrice(bar));
         }
 
         await db.SaveChangesAsync(ct);
