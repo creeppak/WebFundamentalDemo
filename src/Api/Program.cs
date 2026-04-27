@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Worker.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +18,12 @@ var connectionString = builder.Configuration.GetConnectionString("Postgres")
 
 var jwtSigningKey = builder.Configuration["Jwt:SigningKey"]
     ?? throw new InvalidOperationException("Jwt:SigningKey is not configured.");
+
+var finnhubApiKey = builder.Configuration["Finnhub:ApiKey"]
+    ?? throw new InvalidOperationException("Finnhub:ApiKey is not configured.");
+
+var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
+    ?? throw new InvalidOperationException("Anthropic:ApiKey is not configured.");
 
 var blazorOrigin = builder.Configuration["Cors:AllowedOrigin"]
     ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
@@ -92,6 +99,8 @@ builder.Services.AddRateLimiter(options =>
             partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             factory: _ => WindowOptions(builder.Configuration, "Register")));
 });
+
+builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey);
 
 builder.Services.Configure<RegistrationOptions>(builder.Configuration.GetSection("Registration"));
 builder.Services.AddScoped<ITokenService, TokenService>();

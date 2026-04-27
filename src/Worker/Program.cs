@@ -1,12 +1,7 @@
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Worker;
-using Worker.Analysis;
-using Worker.Analysis.Claude;
-using Worker.Jobs;
-using Worker.Mappers;
-using Worker.MarketData;
-using Worker.MarketData.Finnhub;
+using Worker.Extensions;
 
 var builder = Host.CreateApplicationBuilder(args);
 
@@ -22,36 +17,7 @@ var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-builder.Services.AddHttpClient<FinnhubHttpClient>((_, client) =>
-{
-    client.BaseAddress = new Uri("https://finnhub.io/api/v1/");
-    client.DefaultRequestHeaders.Add("X-Finnhub-Token", finnhubApiKey);
-})
-.AddPolicyHandler((sp, _) => FinnhubPolicies.CreateRateLimitPolicy(
-    sp.GetRequiredService<ILogger<FinnhubHttpClient>>()))
-.AddPolicyHandler(FinnhubPolicies.RetryPolicy)
-.AddPolicyHandler(FinnhubPolicies.CircuitBreakerPolicy);
-
-builder.Services.AddScoped<IMarketDataProvider, FinnhubMarketDataProvider>();
-
-builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
-{
-    client.BaseAddress = new Uri("https://api.anthropic.com/");
-    client.DefaultRequestHeaders.Add("x-api-key", anthropicApiKey);
-    client.DefaultRequestHeaders.Add("anthropic-version", "2023-06-01");
-})
-.AddPolicyHandler((sp, _) => AnthropicPolicies.CreateRateLimitPolicy(
-    sp.GetRequiredService<ILogger<AnthropicHttpClient>>()))
-.AddPolicyHandler(AnthropicPolicies.RetryPolicy);
-
-builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
-
-builder.Services.AddSingleton<JobMapper>();
-builder.Services.AddScoped<PriceSyncJob>();
-builder.Services.AddScoped<FundamentalsSyncJob>();
-builder.Services.AddScoped<NewsSyncJob>();
-builder.Services.AddScoped<AnalysisGenerationJob>();
-builder.Services.AddScoped<JobOrchestrator>();
+builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey);
 
 builder.Services.AddHostedService<WorkerService>();
 
