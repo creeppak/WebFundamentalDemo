@@ -1,8 +1,9 @@
-using Hangfire;
-using Hangfire.PostgreSql;
+using Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Worker;
 using Worker.Analysis;
 using Worker.Analysis.Claude;
+using Worker.Jobs;
 using Worker.MarketData;
 using Worker.MarketData.Finnhub;
 
@@ -16,6 +17,9 @@ var finnhubApiKey = builder.Configuration["Finnhub:ApiKey"]
 
 var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
     ?? throw new InvalidOperationException("Anthropic:ApiKey is not configured.");
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
 builder.Services.AddHttpClient<FinnhubHttpClient>((_, client) =>
 {
@@ -41,14 +45,8 @@ builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
 
 builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
 
-builder.Services.AddHangfire(config => config
-    .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
-    .UseSimpleAssemblyNameTypeSerializer()
-    .UseRecommendedSerializerSettings()
-    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(connectionString),
-        new PostgreSqlStorageOptions { SchemaName = "hangfire" }));
+builder.Services.AddScoped<PriceSyncJob>();
 
-builder.Services.AddHangfireServer();
 builder.Services.AddHostedService<WorkerService>();
 
 var host = builder.Build();

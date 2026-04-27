@@ -9,10 +9,6 @@
     <!-- Worker -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Http.Polly" Version="8.0.0" />
-    <!-- Hangfire -->
-    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.6" />
-    <PackageVersion Include="Hangfire.Core" Version="1.8.6" />
-    <PackageVersion Include="Hangfire.PostgreSql" Version="1.20.3" />
     <!-- Data access -->
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="8.0.13" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.11" />

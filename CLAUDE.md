@@ -29,7 +29,6 @@ Blazor client → ASP.NET API → Postgres (reads cached data)
 
 - **.NET 8** / C# (ASP.NET Core, Blazor WebAssembly, Worker Service)
 - **PostgreSQL** + EF Core (Npgsql provider) — containerized, single Cloud Run instance with Filestore-mounted volume for data persistence
-- **Hangfire** for job scheduling (Postgres-backed storage, isolated schema)
 - **Mapperly** for compile-time DTO↔domain object mapping
 - Docker + Docker Compose for local dev
 - **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud Load Balancing, Secret Manager, Filestore for Postgres data, Cloud Scheduler for Worker job)
@@ -84,7 +83,6 @@ dotnet test
 - Index on `(ticker, date DESC)` for `prices`, `fundamentals`, and `analyses` tables — these are the hot read paths.
 - Money-like fields (cash balance, stock prices, transaction amounts) use `decimal(18,4)`, never `double` or `float`.
 - Transactions for multi-step operations (e.g. buy = deduct cash + insert transaction row + update holding must be atomic). Use `IDbContextTransaction`.
-- **Hangfire uses a separate Postgres schema** (`hangfire`) to keep its tables out of EF Core migrations.
 - **Migration ownership:** the `Api` project owns migrations. The `Worker` reads and writes data but does not run migrations.
 - **Do not run migrations from Api startup in production.** Run them as a one-off Cloud Run Job before deploying a new Api revision. Multiple Api instances racing on startup corrupts migration history.
 - **Postgres runs in a single Cloud Run instance with Filestore-mounted data directory.** This means only one Postgres instance may be running at a time — the Cloud Run service must be configured with `minInstances=1`, `maxInstances=1` (no concurrent revisions that would briefly run two). Deployments take Postgres offline for ~30s.
@@ -127,20 +125,12 @@ dotnet test
 - **Prompt injection via news headlines:** news content is user-untrusted data going into a prompt. Wrap news content in clearly-delimited blocks (e.g. `<news>...</news>`) and instruct the model to treat it as data, not instructions. Low risk for a demo but easy to get right.
 - **Not financial advice disclaimer** must appear alongside every displayed analysis in the UI, not just on an About page.
 
-## Nightly Jobs (Hangfire)
+## Nightly Jobs
 
-**Hangfire configuration:**
+**Execution model:**
 
-- Hangfire storage in the same Postgres instance, **isolated schema** (`hangfire`) — keeps its tables out of EF Core migrations.
-- Hangfire dashboard enabled in Development, protected by basic auth or disabled entirely in Production.
-- Jobs registered as recurring jobs via `RecurringJob.AddOrUpdate(...)` with cron expressions.
-- Scheduled run time: **02:00 UTC** — after US market close + news cycle settles. Document any change.
-
-**Execution model on GCP:**
-
-- **Worker runs as a Cloud Scheduler-triggered Cloud Run Job**, not an always-on service. The job starts at 02:00 UTC, runs the job chain, exits. Cheaper and more correct than keeping a process idle 23 hours a day.
-- Because the Worker is not always running, Hangfire's recurring-job scheduling is used only locally. In production, Cloud Scheduler triggers the Cloud Run Job and it runs the jobs imperatively on startup, then shuts down.
-- Local dev: Hangfire runs as an always-on service inside the Worker container, scheduling itself.
+- **Worker runs imperatively** — there is no in-process scheduler in either environment. In production, Cloud Scheduler triggers the Worker as a Cloud Run Job at 02:00 UTC; it runs the four jobs in sequence and exits. Locally, jobs are triggered on demand via the admin API endpoint.
+- Do not add Hangfire or any other in-process scheduler to the Worker.
 
 **Job order (strict):**
 
@@ -156,7 +146,7 @@ Each job:
 - Is **idempotent** — running twice in one day must not corrupt data. Upsert, don't insert blindly.
 - Continues through per-ticker failures — one bad ticker does not fail the batch.
 
-**Manual trigger:** admin-only API endpoint to run a specific job on demand. Critical for debugging and first deploy — do not skip this.
+**Manual trigger:** admin-only API endpoint to run any job (or the full chain) on demand. This is the primary way to run jobs locally — do not skip this.
 
 ## Trading Logic
 

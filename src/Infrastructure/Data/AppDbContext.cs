@@ -9,6 +9,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 {
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<Stock> Stocks => Set<Stock>();
+    public DbSet<Price> Prices => Set<Price>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
