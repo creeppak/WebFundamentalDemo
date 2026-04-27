@@ -46,6 +46,7 @@ builder.Services.AddHttpClient<AnthropicHttpClient>((_, client) =>
 builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
 
 builder.Services.AddScoped<PriceSyncJob>();
+builder.Services.AddScoped<FundamentalsSyncJob>();
 
 builder.Services.AddHostedService<WorkerService>();
 

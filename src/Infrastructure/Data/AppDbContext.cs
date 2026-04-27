@@ -11,6 +11,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Transaction> Transactions => Set<Transaction>();
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<Price> Prices => Set<Price>();
+    public DbSet<Fundamental> Fundamentals => Set<Fundamental>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
