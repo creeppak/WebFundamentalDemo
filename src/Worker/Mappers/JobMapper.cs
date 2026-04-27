@@ -1,6 +1,7 @@
 using Infrastructure.Domain;
 using Riok.Mapperly.Abstractions;
 using Worker.MarketData;
+using NewsItem = Worker.MarketData.NewsItem;
 
 namespace Worker.Mappers;
 
@@ -20,4 +21,7 @@ public partial class JobMapper
     [MapperIgnoreTarget(nameof(Fundamental.Id))]
     [MapperIgnoreTarget(nameof(Fundamental.Date))]
     public partial void UpdateFundamental(StockFundamentals snapshot, Fundamental target);
+
+    [MapperIgnoreTarget(nameof(NewsArticle.Id))]
+    public partial NewsArticle ToNewsArticle(NewsItem item);
 }

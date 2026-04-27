@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Stock> Stocks => Set<Stock>();
     public DbSet<Price> Prices => Set<Price>();
     public DbSet<Fundamental> Fundamentals => Set<Fundamental>();
+    public DbSet<NewsArticle> NewsArticles => Set<NewsArticle>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

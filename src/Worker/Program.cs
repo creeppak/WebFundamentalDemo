@@ -49,6 +49,7 @@ builder.Services.AddScoped<IAnalysisGenerator, ClaudeAnalysisGenerator>();
 builder.Services.AddSingleton<JobMapper>();
 builder.Services.AddScoped<PriceSyncJob>();
 builder.Services.AddScoped<FundamentalsSyncJob>();
+builder.Services.AddScoped<NewsSyncJob>();
 
 builder.Services.AddHostedService<WorkerService>();
 
