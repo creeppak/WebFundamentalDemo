@@ -50,6 +50,7 @@ builder.Services.AddSingleton<JobMapper>();
 builder.Services.AddScoped<PriceSyncJob>();
 builder.Services.AddScoped<FundamentalsSyncJob>();
 builder.Services.AddScoped<NewsSyncJob>();
+builder.Services.AddScoped<AnalysisGenerationJob>();
 
 builder.Services.AddHostedService<WorkerService>();
 
