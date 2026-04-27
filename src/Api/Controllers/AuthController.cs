@@ -1,6 +1,7 @@
 using Api.Auth;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Shared.Auth;
 
 namespace Api.Controllers;
 

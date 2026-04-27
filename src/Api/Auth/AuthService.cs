@@ -3,6 +3,7 @@ using Infrastructure.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Shared.Auth;
 
 namespace Api.Auth;
 
