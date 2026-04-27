@@ -1,3 +1,4 @@
+#if DEBUG
 using Infrastructure.Data;
 using Infrastructure.Domain;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +16,10 @@ public class AdminController(
     AppDbContext db,
     ILogger<AdminController> logger) : ControllerBase
 {
+    /// <summary>Run the full nightly job chain (price sync → fundamentals → news → analysis) and return all resulting job run records.</summary>
+    /// <response code="200">Array of job run records, one per job, in execution order.</response>
     [HttpPost("run-all")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<ActionResult<IReadOnlyList<JobRunResponse>>> RunAll(CancellationToken ct)
     {
         var before = DateTime.UtcNow;
@@ -33,7 +37,13 @@ public class AdminController(
         return Ok(runs.Select(ToResponse).ToList());
     }
 
+    /// <summary>Run a single job by name and return its job run record.</summary>
+    /// <param name="jobName">One of: pricesync, fundamentalssync, newssync, analysisgeneration.</param>
+    /// <response code="200">Job run record for the completed job.</response>
+    /// <response code="404">Unknown job name, or job ran but produced no record.</response>
     [HttpPost("{jobName}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<JobRunResponse>> RunJob(string jobName, CancellationToken ct)
     {
         var before = DateTime.UtcNow;
@@ -83,3 +93,4 @@ public class AdminController(
         r.TotalInputTokens,
         r.TotalOutputTokens);
 }
+#endif

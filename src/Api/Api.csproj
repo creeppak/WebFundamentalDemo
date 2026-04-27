@@ -2,12 +2,15 @@
 
   <PropertyGroup>
     <UserSecretsId>4fb0fa63-efb7-457c-ba3d-010c6c0917d3</UserSecretsId>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591;1573</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
     <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" />
+    <PackageReference Include="Riok.Mapperly" />
     <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
