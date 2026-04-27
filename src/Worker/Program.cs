@@ -51,6 +51,7 @@ builder.Services.AddScoped<PriceSyncJob>();
 builder.Services.AddScoped<FundamentalsSyncJob>();
 builder.Services.AddScoped<NewsSyncJob>();
 builder.Services.AddScoped<AnalysisGenerationJob>();
+builder.Services.AddScoped<JobOrchestrator>();
 
 builder.Services.AddHostedService<WorkerService>();
 

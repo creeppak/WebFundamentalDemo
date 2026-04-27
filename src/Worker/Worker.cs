@@ -1,20 +1,33 @@
+using Microsoft.Extensions.DependencyInjection;
+using Worker.Jobs;
+
 namespace Worker;
 
-public class WorkerService : BackgroundService
+public class WorkerService(
+    IServiceScopeFactory scopeFactory,
+    IHostApplicationLifetime lifetime,
+    ILogger<WorkerService> logger) : BackgroundService
 {
-    private readonly ILogger<WorkerService> _logger;
-
-    public WorkerService(ILogger<WorkerService> logger)
-    {
-        _logger = logger;
-    }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            await Task.Delay(1000, stoppingToken);
+            await using var scope = scopeFactory.CreateAsyncScope();
+            var orchestrator = scope.ServiceProvider.GetRequiredService<JobOrchestrator>();
+            await orchestrator.RunAllAsync(stoppingToken);
+        }
+        catch (OperationCanceledException)
+        {
+            logger.LogWarning("Job chain was cancelled");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Job chain failed with an unhandled exception");
+        }
+        finally
+        {
+            // Always exit — this is a run-once process (Cloud Run Job pattern).
+            lifetime.StopApplication();
         }
     }
 }
