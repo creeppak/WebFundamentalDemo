@@ -1,0 +1,121 @@
+@page "/portfolio"
+@attribute [Authorize]
+@inject PortfolioClient PortfolioClient
+
+<PageTitle>Portfolio</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Portfolio</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_portfolio is null)
+{
+    <MudAlert Severity="Severity.Error">Failed to load portfolio.</MudAlert>
+}
+else
+{
+    <MudGrid Spacing="3" Class="mb-6">
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Cash Balance</MudText>
+                <MudText Typo="Typo.h5">@FormatMoney(_portfolio.CashBalance)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Market Value</MudText>
+                <MudText Typo="Typo.h5">@FormatMoney(_portfolio.TotalMarketValue)</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="4">
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Unrealized P&amp;L</MudText>
+                <MudText Typo="Typo.h5" Color="@PnLColor(_portfolio.TotalUnrealizedPnL)">
+                    @FormatPnL(_portfolio.TotalUnrealizedPnL)
+                </MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <MudText Typo="Typo.h6" GutterBottom="true">Holdings</MudText>
+
+    @if (_portfolio.Holdings.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">
+            You have no open positions. Browse <MudLink Href="/stocks">stocks</MudLink> to get started.
+        </MudAlert>
+    }
+    else
+    {
+        <MudTable Items="_portfolio.Holdings" Hover="true" Dense="false">
+            <HeaderContent>
+                <MudTh>Ticker</MudTh>
+                <MudTh>Company</MudTh>
+                <MudTh Style="text-align:right">Shares</MudTh>
+                <MudTh Style="text-align:right">Avg Cost</MudTh>
+                <MudTh Style="text-align:right">Current Price</MudTh>
+                <MudTh Style="text-align:right">Market Value</MudTh>
+                <MudTh Style="text-align:right">Unrealized P&amp;L</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Ticker">
+                    <MudLink Href="@($"/stocks/{context.Ticker}")" Typo="Typo.body1">
+                        <b>@context.Ticker</b>
+                    </MudLink>
+                </MudTd>
+                <MudTd DataLabel="Company">@context.CompanyName</MudTd>
+                <MudTd DataLabel="Shares" Style="text-align:right">@($"{context.Quantity:N4}")</MudTd>
+                <MudTd DataLabel="Avg Cost" Style="text-align:right">@FormatMoney(context.AverageCostBasis)</MudTd>
+                <MudTd DataLabel="Current Price" Style="text-align:right">@FormatMoney(context.CurrentPrice)</MudTd>
+                <MudTd DataLabel="Market Value" Style="text-align:right">@FormatMoney(context.MarketValue)</MudTd>
+                <MudTd DataLabel="Unrealized P&L" Style="text-align:right">
+                    <MudStack AlignItems="AlignItems.End" Spacing="0">
+                        <MudText Color="@PnLColor(context.UnrealizedPnL)">
+                            @FormatPnL(context.UnrealizedPnL)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="@PnLColor(context.UnrealizedPnLPercent)">
+                            @FormatPnLPercent(context.UnrealizedPnLPercent)
+                        </MudText>
+                    </MudStack>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    }
+}
+
+@code {
+    private PortfolioDto? _portfolio;
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _portfolio = await PortfolioClient.GetPortfolioAsync();
+        _loading = false;
+    }
+
+    private static string FormatMoney(decimal? value) =>
+        value.HasValue ? $"${value.Value:N2}" : "—";
+
+    private static string FormatPnL(decimal? value) => value switch
+    {
+        null => "—",
+        > 0  => $"+${value.Value:N2}",
+        _    => $"-${Math.Abs(value.Value):N2}"
+    };
+
+    private static string FormatPnLPercent(decimal? value) => value switch
+    {
+        null => "",
+        > 0  => $"+{value.Value:N2}%",
+        _    => $"{value.Value:N2}%"
+    };
+
+    private static Color PnLColor(decimal? value) => value switch
+    {
+        > 0 => Color.Success,
+        < 0 => Color.Error,
+        _   => Color.Default
+    };
+}

@@ -1,0 +1,73 @@
+@page "/stocks"
+@attribute [Authorize]
+@inject StocksClient StocksClient
+@inject NavigationManager Navigation
+
+<PageTitle>Stocks</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">Stocks</MudText>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_stocks.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No stocks are currently tracked.</MudAlert>
+}
+else
+{
+    <MudTable Items="_stocks" Hover="true" T="StockSummaryDto" OnRowClick="OnRowClick">
+        <HeaderContent>
+            <MudTh>Ticker</MudTh>
+            <MudTh>Company</MudTh>
+            <MudTh Style="text-align:right">Price</MudTh>
+            <MudTh Style="text-align:right">Day Change</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Ticker">
+                <MudText Typo="Typo.body1"><b>@context.Ticker</b></MudText>
+            </MudTd>
+            <MudTd DataLabel="Company">@context.CompanyName</MudTd>
+            <MudTd DataLabel="Price" Style="text-align:right">
+                @FormatPrice(context.LatestClose)
+            </MudTd>
+            <MudTd DataLabel="Day Change" Style="text-align:right">
+                <MudText Color="@ChangeColor(context.DayChangePercent)">
+                    @FormatChange(context.DayChangePercent)
+                </MudText>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private IReadOnlyList<StockSummaryDto> _stocks = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _stocks = await StocksClient.GetAllAsync();
+        _loading = false;
+    }
+
+    private void OnRowClick(TableRowClickEventArgs<StockSummaryDto> args) =>
+        Navigation.NavigateTo($"/stocks/{args.Item!.Ticker}");
+
+    private static string FormatPrice(decimal? price) =>
+        price.HasValue ? $"${price.Value:N2}" : "—";
+
+    private static string FormatChange(decimal? pct) => pct switch
+    {
+        null => "—",
+        > 0  => $"+{pct.Value:N2}%",
+        _    => $"{pct.Value:N2}%"
+    };
+
+    private static Color ChangeColor(decimal? pct) => pct switch
+    {
+        > 0 => Color.Success,
+        < 0 => Color.Error,
+        _   => Color.Default
+    };
+}

@@ -1,0 +1,103 @@
+@page "/portfolio/transactions"
+@attribute [Authorize]
+@inject PortfolioClient PortfolioClient
+
+<PageTitle>Transaction History</PageTitle>
+
+<MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Class="mb-4">
+    <MudText Typo="Typo.h4">Transaction History</MudText>
+    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.ArrowBack" Href="/portfolio">
+        Portfolio
+    </MudButton>
+</MudStack>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_transactions.Count == 0)
+{
+    <MudAlert Severity="Severity.Info">No transactions yet.</MudAlert>
+}
+else
+{
+    <MudTable Items="_transactions" Hover="true" Dense="false">
+        <HeaderContent>
+            <MudTh>Date</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Ticker</MudTh>
+            <MudTh Style="text-align:right">Price</MudTh>
+            <MudTh Style="text-align:right">Shares</MudTh>
+            <MudTh Style="text-align:right">Total</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Date">
+                <MudText Typo="Typo.body2">@context.CreatedAt.ToLocalTime().ToString("MMM d, yyyy")</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @context.CreatedAt.ToLocalTime().ToString("HH:mm")
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Type">
+                <MudChip T="string" Size="Size.Small" Color="@TypeColor(context.TransactionType)"
+                         Variant="Variant.Filled">
+                    @context.TransactionType
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Ticker">
+                @if (context.Ticker is not null)
+                {
+                    <MudLink Href="@($"/stocks/{context.Ticker}")"><b>@context.Ticker</b></MudLink>
+                }
+                else
+                {
+                    <MudText Color="Color.Secondary">—</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Price" Style="text-align:right">
+                @(context.TransactionType == "Deposit" ? "—" : $"${context.Price:N2}")
+            </MudTd>
+            <MudTd DataLabel="Shares" Style="text-align:right">
+                @(context.TransactionType == "Deposit" ? "—" : $"{context.Quantity:N4}")
+            </MudTd>
+            <MudTd DataLabel="Total" Style="text-align:right">
+                <MudText Color="@TotalColor(context.TransactionType)">
+                    @FormatTotal(context)
+                </MudText>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private IReadOnlyList<TransactionDto> _transactions = [];
+    private bool _loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _transactions = await PortfolioClient.GetTransactionsAsync();
+        _loading = false;
+    }
+
+    private static Color TypeColor(string type) => type switch
+    {
+        "Deposit" => Color.Info,
+        "Buy"     => Color.Primary,
+        "Sell"    => Color.Warning,
+        _         => Color.Default
+    };
+
+    private static Color TotalColor(string type) => type switch
+    {
+        "Deposit" => Color.Info,
+        "Sell"    => Color.Success,
+        _         => Color.Default
+    };
+
+    private static string FormatTotal(TransactionDto t) => t.TransactionType switch
+    {
+        "Deposit" => $"+${t.Price:N2}",
+        "Buy"     => $"-${t.Price * t.Quantity:N2}",
+        "Sell"    => $"+${t.Price * t.Quantity:N2}",
+        _         => $"${t.Price * t.Quantity:N2}"
+    };
+}

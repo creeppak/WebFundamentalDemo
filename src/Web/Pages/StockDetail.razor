@@ -1,0 +1,203 @@
+@page "/stocks/{Ticker}"
+@attribute [Authorize]
+@inject StocksClient StocksClient
+@inject NavigationManager Navigation
+
+<PageTitle>@((_stock?.CompanyName ?? Ticker) + " — Virtual Stock Trader")</PageTitle>
+
+@if (_loading)
+{
+    <MudProgressLinear Indeterminate="true" Class="mb-4" />
+}
+else if (_stock is null)
+{
+    <MudAlert Severity="Severity.Error">
+        Ticker <b>@Ticker</b> was not found.
+        <MudLink Href="/stocks" Class="ml-2">Back to stocks</MudLink>
+    </MudAlert>
+}
+else
+{
+    <MudGrid Spacing="4">
+
+        <MudItem xs="12">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Wrap="Wrap.Wrap">
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.h4">@_stock.CompanyName</MudText>
+                    <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_stock.Ticker</MudText>
+                </MudStack>
+                <MudStack AlignItems="AlignItems.End" Spacing="0">
+                    <MudText Typo="Typo.h4">@FormatPrice(_stock.LatestClose)</MudText>
+                    <MudText Typo="Typo.h6" Color="@ChangeColor(_stock.DayChangePercent)">
+                        @FormatChange(_stock.DayChangePercent)
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.subtitle1" GutterBottom="true">14-Day Price History</MudText>
+                @if (_history.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">No price history available yet.</MudAlert>
+                }
+                else
+                {
+                    <MudChart ChartType="ChartType.Line"
+                              ChartSeries="@_series"
+                              XAxisLabels="@_xLabels"
+                              Width="100%" Height="280px"
+                              ChartOptions="@_chartOptions" />
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle1" GutterBottom="true">Fundamentals</MudText>
+                @if (_stock.Fundamentals is null)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">Fundamentals not yet available.</MudAlert>
+                }
+                else
+                {
+                    var f = _stock.Fundamentals;
+                    <MudGrid Spacing="1">
+                        @FundamentalRow("Market Cap",     FormatMarketCap(f.MarketCap))
+                        @FundamentalRow("P/E Ratio",      f.PeRatio.HasValue ? $"{f.PeRatio.Value:N1}" : "—")
+                        @FundamentalRow("EPS (Annual)",   f.EpsAnnual.HasValue ? $"${f.EpsAnnual.Value:N2}" : "—")
+                        @FundamentalRow("52-Week High",   f.WeekHigh52.HasValue ? $"${f.WeekHigh52.Value:N2}" : "—")
+                        @FundamentalRow("52-Week Low",    f.WeekLow52.HasValue ? $"${f.WeekLow52.Value:N2}" : "—")
+                        @FundamentalRow("Dividend Yield", f.DividendYield.HasValue ? $"{f.DividendYield.Value:N2}%" : "—")
+                        @FundamentalRow("Sector",         f.Sector ?? "—")
+                        @FundamentalRow("Industry",       f.Industry ?? "—")
+                    </MudGrid>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
+                        As of @f.Date.ToString("MMM d, yyyy") · Data delayed ~15 minutes
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
+                <MudText Typo="Typo.subtitle1" GutterBottom="true">AI Analysis</MudText>
+                @if (_stock.LatestAnalysis is null)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">Analysis not yet available.</MudAlert>
+                }
+                else
+                {
+                    var a = _stock.LatestAnalysis;
+                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                        AI-generated · Not financial advice
+                    </MudAlert>
+                    <MudText Typo="Typo.body2">@a.Analysis</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
+                        Generated @a.GeneratedAt.ToString("MMM d, yyyy") for @a.Date.ToString("MMM d, yyyy")
+                    </MudText>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-4">
+                <MudText Typo="Typo.subtitle1" GutterBottom="true">Recent News</MudText>
+                @if (_news.Count == 0)
+                {
+                    <MudAlert Severity="Severity.Info" Dense="true">No recent news available.</MudAlert>
+                }
+                else
+                {
+                    <MudList T="NewsArticleDto" Dense="true">
+                        @foreach (var article in _news)
+                        {
+                            <MudListItem>
+                                <MudStack Spacing="0">
+                                    <MudLink Href="@article.Url" Target="_blank" Typo="Typo.body2">
+                                        @article.Headline
+                                    </MudLink>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @article.Source · @article.PublishedAt.ToLocalTime().ToString("MMM d, HH:mm")
+                                    </MudText>
+                                </MudStack>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudPaper>
+        </MudItem>
+
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public string Ticker { get; set; } = "";
+
+    private StockDetailDto? _stock;
+    private IReadOnlyList<PricePointDto> _history = [];
+    private IReadOnlyList<NewsArticleDto> _news = [];
+    private bool _loading = true;
+
+    private List<ChartSeries> _series = [];
+    private string[] _xLabels = [];
+    private readonly ChartOptions _chartOptions = new() { YAxisTicks = 4, LineStrokeWidth = 2 };
+
+    protected override async Task OnInitializedAsync()
+    {
+        var detailTask  = StocksClient.GetByTickerAsync(Ticker);
+        var historyTask = StocksClient.GetHistoryAsync(Ticker, 14);
+        var newsTask    = StocksClient.GetNewsAsync(Ticker);
+
+        await Task.WhenAll(detailTask, historyTask, newsTask);
+
+        _stock   = await detailTask;
+        _history = await historyTask;
+        _news    = await newsTask;
+
+        if (_history.Count > 0)
+        {
+            _xLabels = _history.Select(p => p.Date.ToString("MMM d")).ToArray();
+            _series  = [new ChartSeries { Name = Ticker, Data = _history.Select(p => (double)p.Close).ToArray() }];
+        }
+
+        _loading = false;
+    }
+
+    private static RenderFragment FundamentalRow(string label, string value) => __builder =>
+    {
+        <MudItem xs="6">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">@label</MudText>
+        </MudItem>
+        <MudItem xs="6">
+            <MudText Typo="Typo.body2">@value</MudText>
+        </MudItem>
+    };
+
+    private static string FormatPrice(decimal? price) =>
+        price.HasValue ? $"${price.Value:N2}" : "—";
+
+    private static string FormatChange(decimal? pct) => pct switch
+    {
+        null => "—",
+        > 0  => $"+{pct.Value:N2}%",
+        _    => $"{pct.Value:N2}%"
+    };
+
+    private static Color ChangeColor(decimal? pct) => pct switch
+    {
+        > 0 => Color.Success,
+        < 0 => Color.Error,
+        _   => Color.Default
+    };
+
+    private static string FormatMarketCap(decimal? value) => value switch
+    {
+        null                  => "—",
+        >= 1_000_000_000_000m => $"${value / 1_000_000_000_000m:N2}T",
+        >= 1_000_000_000m     => $"${value / 1_000_000_000m:N2}B",
+        >= 1_000_000m         => $"${value / 1_000_000m:N2}M",
+        _                     => $"${value:N0}"
+    };
+}
