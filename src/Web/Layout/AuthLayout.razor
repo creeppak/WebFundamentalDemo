@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudMainContent>
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="min-height: 100vh;">
+            <MudContainer MaxWidth="MaxWidth.ExtraSmall">
+                @Body
+            </MudContainer>
+        </MudStack>
+    </MudMainContent>
+</MudLayout>

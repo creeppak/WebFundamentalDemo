@@ -1,0 +1,87 @@
+@page "/register"
+@layout AuthLayout
+@inject AuthClient AuthClient
+@inject AppAuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Create account</PageTitle>
+
+<MudCard Elevation="4">
+    <MudCardContent Class="pa-6">
+        <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">Create account</MudText>
+
+        <MudTextField Label="Email" @bind-Value="_email" InputType="InputType.Email"
+                      Variant="Variant.Outlined" FullWidth="true" Class="mb-3"
+                      Error="@(_submitAttempted && string.IsNullOrWhiteSpace(_email))"
+                      ErrorText="Email is required" />
+
+        <MudTextField Label="Password" @bind-Value="_password" InputType="InputType.Password"
+                      Variant="Variant.Outlined" FullWidth="true" Class="mb-4"
+                      Error="@(_submitAttempted && string.IsNullOrWhiteSpace(_password))"
+                      ErrorText="Password is required" />
+
+        @if (_errors is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">
+                @if (_errors.Count() == 1)
+                {
+                    @_errors.First()
+                }
+                else
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var error in _errors)
+                        {
+                            <MudListItem Icon="@Icons.Material.Filled.Circle" IconSize="Size.Small">
+                                @error
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudAlert>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   OnClick="HandleRegister" Disabled="_loading">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Create account
+        </MudButton>
+    </MudCardContent>
+    <MudCardActions Class="justify-center pb-4">
+        <MudText Typo="Typo.body2">
+            Already have an account? <MudLink Href="/login">Log in</MudLink>
+        </MudText>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private IEnumerable<string>? _errors;
+    private bool _loading;
+    private bool _submitAttempted;
+
+    private async Task HandleRegister()
+    {
+        _submitAttempted = true;
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+            return;
+
+        _loading = true;
+        _errors = null;
+
+        var (token, errors) = await AuthClient.RegisterAsync(new RegisterRequest(_email, _password));
+        if (errors is not null)
+        {
+            _errors = errors;
+            _loading = false;
+            return;
+        }
+
+        AuthProvider.NotifyLogin(token!);
+        Navigation.NavigateTo("/");
+    }
+}

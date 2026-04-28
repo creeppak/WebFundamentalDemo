@@ -1,0 +1,71 @@
+@page "/login"
+@layout AuthLayout
+@inject AuthClient AuthClient
+@inject AppAuthenticationStateProvider AuthProvider
+@inject NavigationManager Navigation
+
+<PageTitle>Log in</PageTitle>
+
+<MudCard Elevation="4">
+    <MudCardContent Class="pa-6">
+        <MudText Typo="Typo.h5" Align="Align.Center" GutterBottom="true">Log in</MudText>
+
+        <MudTextField Label="Email" @bind-Value="_email" InputType="InputType.Email"
+                      Variant="Variant.Outlined" FullWidth="true" Class="mb-3"
+                      Error="@(_submitAttempted && string.IsNullOrWhiteSpace(_email))"
+                      ErrorText="Email is required" />
+
+        <MudTextField Label="Password" @bind-Value="_password" InputType="InputType.Password"
+                      Variant="Variant.Outlined" FullWidth="true" Class="mb-4"
+                      Error="@(_submitAttempted && string.IsNullOrWhiteSpace(_password))"
+                      ErrorText="Password is required" />
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4" Dense="true">@_error</MudAlert>
+        }
+
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
+                   OnClick="HandleLogin" Disabled="_loading">
+            @if (_loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Log in
+        </MudButton>
+    </MudCardContent>
+    <MudCardActions Class="justify-center pb-4">
+        <MudText Typo="Typo.body2">
+            Don't have an account? <MudLink Href="/register">Register</MudLink>
+        </MudText>
+    </MudCardActions>
+</MudCard>
+
+@code {
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _loading;
+    private bool _submitAttempted;
+
+    private async Task HandleLogin()
+    {
+        _submitAttempted = true;
+        if (string.IsNullOrWhiteSpace(_email) || string.IsNullOrWhiteSpace(_password))
+            return;
+
+        _loading = true;
+        _error = null;
+
+        var result = await AuthClient.LoginAsync(new LoginRequest(_email, _password));
+        if (result is null)
+        {
+            _error = "Invalid email or password.";
+            _loading = false;
+            return;
+        }
+
+        AuthProvider.NotifyLogin(result);
+        Navigation.NavigateTo("/");
+    }
+}
