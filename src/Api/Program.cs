@@ -1,6 +1,9 @@
 using System.Text;
 using System.Threading.RateLimiting;
 using Api.Auth;
+using Api.Portfolio;
+using FluentValidation;
+using Shared.Portfolio;
 using Infrastructure.Data;
 using Infrastructure.Domain;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -108,6 +111,11 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 builder.Services.AddSingleton<Api.Mappers.StockMapper>();
 builder.Services.AddScoped<Api.Stocks.StockService>();
+
+builder.Services.AddSingleton<Api.Mappers.PortfolioMapper>();
+builder.Services.AddScoped<PortfolioService>();
+builder.Services.AddScoped<IValidator<BuyRequest>, BuyRequestValidator>();
+builder.Services.AddScoped<IValidator<SellRequest>, SellRequestValidator>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

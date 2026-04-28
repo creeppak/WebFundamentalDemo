@@ -16,11 +16,20 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
             .IsRequired()
             .HasConversion<string>();
 
+        builder.Property(t => t.Ticker)
+            .HasMaxLength(10);
+
         builder.Property(t => t.Price)
             .HasColumnType("decimal(18,4)");
 
         builder.Property(t => t.Quantity)
             .HasColumnType("decimal(18,4)");
+
+        builder.Property(t => t.CreatedAt)
+            .IsRequired()
+            .HasDefaultValueSql("NOW()");
+
+        builder.HasIndex(t => new { t.UserId, t.CreatedAt });
 
         builder.HasOne<User>()
             .WithMany()

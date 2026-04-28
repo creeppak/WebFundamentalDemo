@@ -33,6 +33,7 @@ public class AuthService(
                 TransactionType = TransactionType.Deposit,
                 Price = 0m,
                 Quantity = _registrationOptions.InitialDepositAmount,
+                CreatedAt = DateTime.UtcNow,
             });
 
             await dbContext.SaveChangesAsync(ct);
