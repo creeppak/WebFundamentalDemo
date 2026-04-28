@@ -1,16 +1,29 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
+@inherits LayoutComponentBase
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start"
+                       OnClick="@(() => _drawerOpen = !_drawerOpen)" />
+        <MudText Typo="Typo.h6" Class="ml-3">Virtual Stock Trader</MudText>
+        <MudSpacer />
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Elevation="2">
+        <MudDrawerHeader>
+            <MudText Typo="Typo.subtitle1" Class="mt-1">Navigation</MudText>
+        </MudDrawerHeader>
         <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    </MudDrawer>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private bool _drawerOpen = true;
+}
