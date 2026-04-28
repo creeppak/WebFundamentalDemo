@@ -17,6 +17,9 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.13" />
     <!-- Validation -->
     <PackageVersion Include="FluentValidation" Version="11.11.0" />
+    <!-- Logging -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="8.0.3" />
+    <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <!-- API -->
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.13" />
