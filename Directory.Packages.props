@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Blazor WASM -->
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Authorization" Version="8.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.13" />
     <PackageVersion Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.13" />
     <PackageVersion Include="Microsoft.Extensions.Http" Version="8.0.1" />
