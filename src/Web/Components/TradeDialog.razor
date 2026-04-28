@@ -1,0 +1,110 @@
+@inject PortfolioClient PortfolioClient
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsBuy ? "Buy" : "Sell") @Ticker</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="1" Class="mb-4">
+            <MudText>@CompanyName</MudText>
+            @if (CurrentPrice.HasValue)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Current price: $@CurrentPrice.Value.ToString("N2")
+                </MudText>
+            }
+            @if (!IsBuy && OwnedShares.HasValue)
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    You own @OwnedShares.Value.ToString("N4") shares
+                </MudText>
+            }
+        </MudStack>
+
+        <MudNumericField @bind-Value="_quantity" T="decimal" Label="Shares"
+                         Variant="Variant.Outlined" FullWidth="true" Step="1m"
+                         HideSpinButtons="false" />
+
+        @if (_quantity > 0 && CurrentPrice.HasValue)
+        {
+            <MudText Typo="Typo.body2" Class="mt-2">
+                Estimated @(IsBuy ? "cost" : "proceeds"):
+                <b>$@((_quantity * CurrentPrice.Value).ToString("N2"))</b>
+            </MudText>
+        }
+
+        @if (_error is not null)
+        {
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_error</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
+        <MudButton Color="@(IsBuy ? Color.Primary : Color.Warning)"
+                   Variant="Variant.Filled"
+                   OnClick="Submit"
+                   Disabled="_submitting">
+            @if (_submitting)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            @(IsBuy ? "Buy" : "Sell")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public string Ticker { get; set; } = "";
+    [Parameter] public string CompanyName { get; set; } = "";
+    [Parameter] public bool IsBuy { get; set; }
+    [Parameter] public decimal? CurrentPrice { get; set; }
+    [Parameter] public decimal? OwnedShares { get; set; }
+
+    private decimal _quantity = 1m;
+    private string? _error;
+    private bool _submitting;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        _error = null;
+
+        if (_quantity <= 0)
+        {
+            _error = "Quantity must be greater than zero.";
+            return;
+        }
+        if (!IsBuy && OwnedShares.HasValue && _quantity > OwnedShares.Value)
+        {
+            _error = $"You only own {OwnedShares.Value:N4} shares.";
+            return;
+        }
+
+        _submitting = true;
+        try
+        {
+            var portfolio = IsBuy
+                ? await PortfolioClient.BuyAsync(new BuyRequest(Ticker, _quantity))
+                : await PortfolioClient.SellAsync(new SellRequest(Ticker, _quantity));
+
+            MudDialog.Close(DialogResult.Ok(portfolio));
+        }
+        catch (HttpRequestException ex)
+        {
+            _error = ex.StatusCode switch
+            {
+                System.Net.HttpStatusCode.UnprocessableEntity =>
+                    IsBuy ? "Insufficient funds." : "Insufficient holdings.",
+                System.Net.HttpStatusCode.NotFound => "Ticker not found.",
+                _ => "An unexpected error occurred. Please try again."
+            };
+        }
+        finally
+        {
+            _submitting = false;
+        }
+    }
+}

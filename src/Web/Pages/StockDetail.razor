@@ -1,6 +1,8 @@
 @page "/stocks/{Ticker}"
 @attribute [Authorize]
 @inject StocksClient StocksClient
+@inject PortfolioClient PortfolioClient
+@inject IDialogService DialogService
 @inject NavigationManager Navigation
 
 <PageTitle>@((_stock?.CompanyName ?? Ticker) + " — Virtual Stock Trader")</PageTitle>
@@ -26,11 +28,28 @@ else
                     <MudText Typo="Typo.h4">@_stock.CompanyName</MudText>
                     <MudText Typo="Typo.subtitle1" Color="Color.Secondary">@_stock.Ticker</MudText>
                 </MudStack>
-                <MudStack AlignItems="AlignItems.End" Spacing="0">
+                <MudStack AlignItems="AlignItems.End" Spacing="1">
                     <MudText Typo="Typo.h4">@FormatPrice(_stock.LatestClose)</MudText>
                     <MudText Typo="Typo.h6" Color="@ChangeColor(_stock.DayChangePercent)">
                         @FormatChange(_stock.DayChangePercent)
                     </MudText>
+                    <MudStack Row="true" Spacing="2">
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                                   Size="Size.Small" OnClick="OpenBuyDialog">
+                            Buy
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                                   Size="Size.Small" OnClick="OpenSellDialog"
+                                   Disabled="@(_holding is null)">
+                            Sell
+                        </MudButton>
+                    </MudStack>
+                    @if (_holding is not null)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            You own @($"{_holding.Quantity:N4}") shares
+                        </MudText>
+                    }
                 </MudStack>
             </MudStack>
         </MudItem>
@@ -138,6 +157,7 @@ else
     private StockDetailDto? _stock;
     private IReadOnlyList<PricePointDto> _history = [];
     private IReadOnlyList<NewsArticleDto> _news = [];
+    private HoldingDto? _holding;
     private bool _loading = true;
 
     private List<ChartSeries> _series = [];
@@ -146,15 +166,17 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        var detailTask  = StocksClient.GetByTickerAsync(Ticker);
-        var historyTask = StocksClient.GetHistoryAsync(Ticker, 14);
-        var newsTask    = StocksClient.GetNewsAsync(Ticker);
+        var detailTask    = StocksClient.GetByTickerAsync(Ticker);
+        var historyTask   = StocksClient.GetHistoryAsync(Ticker, 14);
+        var newsTask      = StocksClient.GetNewsAsync(Ticker);
+        var portfolioTask = PortfolioClient.GetPortfolioAsync();
 
-        await Task.WhenAll(detailTask, historyTask, newsTask);
+        await Task.WhenAll(detailTask, historyTask, newsTask, portfolioTask);
 
-        _stock   = await detailTask;
-        _history = await historyTask;
-        _news    = await newsTask;
+        _stock    = await detailTask;
+        _history  = await historyTask;
+        _news     = await newsTask;
+        _holding  = (await portfolioTask)?.Holdings.FirstOrDefault(h => h.Ticker == Ticker);
 
         if (_history.Count > 0)
         {
@@ -163,6 +185,37 @@ else
         }
 
         _loading = false;
+    }
+
+    private async Task OpenBuyDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TradeDialog.Ticker),      Ticker },
+            { nameof(TradeDialog.CompanyName), _stock!.CompanyName },
+            { nameof(TradeDialog.IsBuy),       true },
+            { nameof(TradeDialog.CurrentPrice), _stock.LatestClose },
+        };
+        var dialog = await DialogService.ShowAsync<TradeDialog>("Buy", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled && result.Data is PortfolioDto portfolio)
+            _holding = portfolio.Holdings.FirstOrDefault(h => h.Ticker == Ticker);
+    }
+
+    private async Task OpenSellDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TradeDialog.Ticker),      Ticker },
+            { nameof(TradeDialog.CompanyName), _stock!.CompanyName },
+            { nameof(TradeDialog.IsBuy),       false },
+            { nameof(TradeDialog.CurrentPrice), _stock.LatestClose },
+            { nameof(TradeDialog.OwnedShares),  _holding?.Quantity },
+        };
+        var dialog = await DialogService.ShowAsync<TradeDialog>("Sell", parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled && result.Data is PortfolioDto portfolio)
+            _holding = portfolio.Holdings.FirstOrDefault(h => h.Ticker == Ticker);
     }
 
     private static RenderFragment FundamentalRow(string label, string value) => __builder =>

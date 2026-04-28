@@ -1,6 +1,7 @@
 @page "/portfolio"
 @attribute [Authorize]
 @inject PortfolioClient PortfolioClient
+@inject IDialogService DialogService
 
 <PageTitle>Portfolio</PageTitle>
 
@@ -58,6 +59,7 @@ else
                 <MudTh Style="text-align:right">Current Price</MudTh>
                 <MudTh Style="text-align:right">Market Value</MudTh>
                 <MudTh Style="text-align:right">Unrealized P&amp;L</MudTh>
+                <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Ticker">
@@ -80,6 +82,18 @@ else
                         </MudText>
                     </MudStack>
                 </MudTd>
+                <MudTd>
+                    <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                                   OnClick="@(() => OpenTradeDialog(context, true))">
+                            Buy
+                        </MudButton>
+                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning"
+                                   OnClick="@(() => OpenTradeDialog(context, false))">
+                            Sell
+                        </MudButton>
+                    </MudStack>
+                </MudTd>
             </RowTemplate>
         </MudTable>
     }
@@ -93,6 +107,23 @@ else
     {
         _portfolio = await PortfolioClient.GetPortfolioAsync();
         _loading = false;
+    }
+
+    private async Task OpenTradeDialog(HoldingDto holding, bool isBuy)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(TradeDialog.Ticker),       holding.Ticker },
+            { nameof(TradeDialog.CompanyName),  holding.CompanyName },
+            { nameof(TradeDialog.IsBuy),        isBuy },
+            { nameof(TradeDialog.CurrentPrice), holding.CurrentPrice },
+            { nameof(TradeDialog.OwnedShares),  isBuy ? null : holding.Quantity },
+        };
+        var title = isBuy ? "Buy" : "Sell";
+        var dialog = await DialogService.ShowAsync<TradeDialog>(title, parameters);
+        var result = await dialog.Result;
+        if (!result!.Canceled && result.Data is PortfolioDto updated)
+            _portfolio = updated;
     }
 
     private static string FormatMoney(decimal? value) =>
