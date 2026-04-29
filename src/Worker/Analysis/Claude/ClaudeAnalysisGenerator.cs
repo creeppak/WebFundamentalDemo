@@ -10,7 +10,7 @@ public class ClaudeAnalysisGenerator(
     AnthropicHttpClient client,
     ILogger<ClaudeAnalysisGenerator> logger) : IAnalysisGenerator
 {
-    private const string Model = "claude-sonnet-4-20250514";
+    private const string Model = "claude-sonnet-4-5";
     private const int MaxTokens = 1024;
 
     private const string SystemPrompt =

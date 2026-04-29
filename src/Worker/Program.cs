@@ -20,6 +20,7 @@ var alphaVantageApiKey = builder.Configuration["AlphaVantage:ApiKey"]
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+builder.Services.Configure<WorkerOptions>(builder.Configuration.GetSection("Worker"));
 builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey, alphaVantageApiKey);
 
 builder.Services.AddHostedService<WorkerService>();
