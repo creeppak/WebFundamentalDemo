@@ -24,6 +24,10 @@ until docker compose exec -T postgres pg_isready -U postgres -q 2>/dev/null; do
 done
 printf "  ${GREEN}Postgres ready${R}\n"
 
+# ── Build ─────────────────────────────────────────────────────────────────────
+log "Building all projects..."
+dotnet build WebFundamentalDemo.sln
+
 # ── .NET services ─────────────────────────────────────────────────────────────
 log "Starting Api, Worker, and Web..."
 
@@ -35,13 +39,13 @@ label() {
     done
 }
 
-label "$BLUE"   "Api"    dotnet run --project src/Api    --launch-profile http &
+label "$BLUE"   "Api"    dotnet run --no-build --project src/Api    --launch-profile http &
 PID_API=$!
 
-label "$YELLOW" "Worker" dotnet run --project src/Worker &
+label "$YELLOW" "Worker" dotnet run --no-build --project src/Worker &
 PID_WORKER=$!
 
-label "$GREEN"  "Web"    dotnet run --project src/Web    --launch-profile http &
+label "$GREEN"  "Web"    dotnet run --no-build --project src/Web    --launch-profile http &
 PID_WEB=$!
 
 # ── Cleanup ───────────────────────────────────────────────────────────────────
