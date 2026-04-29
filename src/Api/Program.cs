@@ -48,6 +48,9 @@ var finnhubApiKey = builder.Configuration["Finnhub:ApiKey"]
 var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
     ?? throw new InvalidOperationException("Anthropic:ApiKey is not configured.");
 
+var alphaVantageApiKey = builder.Configuration["AlphaVantage:ApiKey"]
+    ?? throw new InvalidOperationException("AlphaVantage:ApiKey is not configured.");
+
 var blazorOrigin = builder.Configuration["Cors:AllowedOrigin"]
     ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
 
@@ -123,7 +126,7 @@ builder.Services.AddRateLimiter(options =>
             factory: _ => WindowOptions(builder.Configuration, "Register")));
 });
 
-builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey);
+builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey, alphaVantageApiKey);
 
 builder.Services.Configure<RegistrationOptions>(builder.Configuration.GetSection("Registration"));
 builder.Services.AddScoped<ITokenService, TokenService>();

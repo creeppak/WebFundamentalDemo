@@ -14,10 +14,13 @@ var finnhubApiKey = builder.Configuration["Finnhub:ApiKey"]
 var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
     ?? throw new InvalidOperationException("Anthropic:ApiKey is not configured.");
 
+var alphaVantageApiKey = builder.Configuration["AlphaVantage:ApiKey"]
+    ?? throw new InvalidOperationException("AlphaVantage:ApiKey is not configured.");
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey);
+builder.Services.AddWorkerJobs(finnhubApiKey, anthropicApiKey, alphaVantageApiKey);
 
 builder.Services.AddHostedService<WorkerService>();
 

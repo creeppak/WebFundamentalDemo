@@ -1,6 +1,5 @@
 using System.Net;
 using System.Text;
-using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Worker.MarketData.Finnhub;
 
@@ -23,72 +22,6 @@ public class FinnhubMarketDataProviderTests
         return new FinnhubMarketDataProvider(
             new FinnhubHttpClient(httpClient),
             NullLogger<FinnhubMarketDataProvider>.Instance);
-    }
-
-    // ── GetPricesAsync ────────────────────────────────────────────────────────
-
-    [Fact]
-    public async Task GetPricesAsync_ValidResponse_ReturnsMappedPriceBars()
-    {
-        var provider = BuildProvider(HttpStatusCode.OK, """
-            {
-              "s": "ok",
-              "t": [1700000000],
-              "o": [150.00],
-              "h": [155.00],
-              "l": [149.00],
-              "c": [153.00],
-              "v": [1000000.0]
-            }
-            """);
-
-        var bars = await provider.GetPricesAsync(Ticker, new DateOnly(2023, 11, 1), new DateOnly(2023, 11, 14), CancellationToken.None);
-
-        var bar = Assert.Single(bars);
-        Assert.Equal(Ticker, bar.Ticker);
-        Assert.Equal(new DateOnly(2023, 11, 14), bar.Date);
-        Assert.Equal(150.00m, bar.Open);
-        Assert.Equal(155.00m, bar.High);
-        Assert.Equal(149.00m, bar.Low);
-        Assert.Equal(153.00m, bar.Close);
-        Assert.Equal(1_000_000L, bar.Volume);
-    }
-
-    [Fact]
-    public async Task GetPricesAsync_NoDataResponse_ReturnsEmptyList()
-    {
-        var provider = BuildProvider(HttpStatusCode.OK, """{"s":"no_data"}""");
-
-        var bars = await provider.GetPricesAsync(Ticker, new DateOnly(2023, 11, 1), new DateOnly(2023, 11, 14), CancellationToken.None);
-
-        Assert.Empty(bars);
-    }
-
-    [Fact]
-    public async Task GetPricesAsync_RateLimitResponse_ThrowsFinnhubRateLimitException()
-    {
-        var provider = BuildProvider(HttpStatusCode.TooManyRequests, "");
-
-        await Assert.ThrowsAsync<FinnhubRateLimitException>(() =>
-            provider.GetPricesAsync(Ticker, new DateOnly(2023, 11, 1), new DateOnly(2023, 11, 14), CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetPricesAsync_ServerErrorResponse_ThrowsHttpRequestException()
-    {
-        var provider = BuildProvider(HttpStatusCode.ServiceUnavailable, "");
-
-        await Assert.ThrowsAsync<HttpRequestException>(() =>
-            provider.GetPricesAsync(Ticker, new DateOnly(2023, 11, 1), new DateOnly(2023, 11, 14), CancellationToken.None));
-    }
-
-    [Fact]
-    public async Task GetPricesAsync_MalformedJson_ThrowsJsonException()
-    {
-        var provider = BuildProvider(HttpStatusCode.OK, "{not valid json}");
-
-        await Assert.ThrowsAsync<JsonException>(() =>
-            provider.GetPricesAsync(Ticker, new DateOnly(2023, 11, 1), new DateOnly(2023, 11, 14), CancellationToken.None));
     }
 
     // ── GetFundamentalsAsync ──────────────────────────────────────────────────

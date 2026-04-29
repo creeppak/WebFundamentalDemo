@@ -4,33 +4,8 @@ namespace Worker.MarketData.Finnhub;
 
 public class FinnhubMarketDataProvider(
     FinnhubHttpClient client,
-    ILogger<FinnhubMarketDataProvider> logger) : IMarketDataProvider
+    ILogger<FinnhubMarketDataProvider> logger) : ICompanyDataProvider
 {
-    public async Task<IReadOnlyList<PriceBar>> GetPricesAsync(string ticker, DateOnly from, DateOnly to, CancellationToken ct)
-    {
-        var candles = await client.GetCandlesAsync(ticker, from, to, ct);
-
-        if (candles?.Status != "ok"
-            || candles.Timestamps is null || candles.Open is null || candles.High is null
-            || candles.Low is null || candles.Close is null || candles.Volume is null)
-        {
-            logger.LogDebug("No price data for {Ticker} ({From}–{To})", ticker, from, to);
-            return [];
-        }
-
-        return Enumerable
-            .Range(0, candles.Timestamps.Count)
-            .Select(i => new PriceBar(
-                Ticker: ticker,
-                Date: DateOnly.FromDateTime(DateTimeOffset.FromUnixTimeSeconds(candles.Timestamps[i]).UtcDateTime),
-                Open: candles.Open[i],
-                High: candles.High[i],
-                Low: candles.Low[i],
-                Close: candles.Close[i],
-                Volume: (long)candles.Volume[i]))
-            .ToList();
-    }
-
     public async Task<StockFundamentals?> GetFundamentalsAsync(string ticker, CancellationToken ct)
     {
         var response = await client.GetMetricsAsync(ticker, ct);

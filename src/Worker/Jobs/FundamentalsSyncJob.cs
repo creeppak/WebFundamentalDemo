@@ -8,7 +8,7 @@ using Worker.MarketData;
 namespace Worker.Jobs;
 
 public class FundamentalsSyncJob(
-    IMarketDataProvider marketData,
+    ICompanyDataProvider marketData,
     AppDbContext db,
     JobMapper mapper,
     ILogger<FundamentalsSyncJob> logger)

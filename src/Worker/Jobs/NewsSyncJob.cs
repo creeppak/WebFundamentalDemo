@@ -8,7 +8,7 @@ using Worker.MarketData;
 namespace Worker.Jobs;
 
 public class NewsSyncJob(
-    IMarketDataProvider marketData,
+    ICompanyDataProvider marketData,
     AppDbContext db,
     JobMapper mapper,
     ILogger<NewsSyncJob> logger)

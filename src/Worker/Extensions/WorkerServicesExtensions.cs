@@ -1,10 +1,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Polly;
+using Polly.Extensions.Http;
 using Worker.Analysis;
 using Worker.Analysis.Claude;
 using Worker.Jobs;
 using Worker.Mappers;
 using Worker.MarketData;
+using Worker.MarketData.AlphaVantage;
 using Worker.MarketData.Finnhub;
 
 namespace Worker.Extensions;
@@ -14,7 +17,8 @@ public static class WorkerServicesExtensions
     public static IServiceCollection AddWorkerJobs(
         this IServiceCollection services,
         string finnhubApiKey,
-        string anthropicApiKey)
+        string anthropicApiKey,
+        string alphaVantageApiKey)
     {
         services.AddHttpClient<FinnhubHttpClient>((_, client) =>
         {
@@ -26,7 +30,19 @@ public static class WorkerServicesExtensions
         .AddPolicyHandler(FinnhubPolicies.RetryPolicy)
         .AddPolicyHandler(FinnhubPolicies.CircuitBreakerPolicy);
 
-        services.AddScoped<IMarketDataProvider, FinnhubMarketDataProvider>();
+        services.AddScoped<ICompanyDataProvider, FinnhubMarketDataProvider>();
+
+        services.AddTransient<AlphaVantageApiKeyHandler>(_ => new AlphaVantageApiKeyHandler(alphaVantageApiKey));
+        services.AddHttpClient<AlphaVantageHttpClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://www.alphavantage.co/");
+        })
+        .AddHttpMessageHandler<AlphaVantageApiKeyHandler>()
+        .AddPolicyHandler(HttpPolicyExtensions
+            .HandleTransientHttpError()
+            .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt))));
+
+        services.AddScoped<IPriceDataProvider, AlphaVantagePriceProvider>();
 
         services.AddHttpClient<AnthropicHttpClient>((_, client) =>
         {
