@@ -13,19 +13,19 @@ A virtual stock trading demo platform. Users register, receive a virtual cash ba
 | `src/Web` | Blazor WebAssembly client |
 | `src/Shared` | DTOs and shared contracts |
 
-**Data flow:** Nightly Worker jobs → Finnhub + Claude API → PostgreSQL ← ASP.NET API ← Blazor client
+**Data flow:** Nightly Worker jobs → Finnhub + Alpha Vantage + Claude API → PostgreSQL ← ASP.NET API ← Blazor client
 
 ## Tech Stack
 
 - .NET 8 / C# (ASP.NET Core, Blazor WASM, Worker Service)
 - PostgreSQL + EF Core (Npgsql)
-- Hangfire (job scheduling, local dev)
 - Mapperly (compile-time DTO↔domain mapping)
 - Docker / Docker Compose
 - GCP Cloud Run + Artifact Registry + Cloud Load Balancing + Secret Manager + Filestore
 - GitHub Actions (CI/CD, Workload Identity Federation auth to GCP)
-- Anthropic Claude API (`claude-sonnet-4-20250514`)
-- Finnhub (market data)
+- Anthropic Claude API (`claude-sonnet-4-5`)
+- Finnhub (fundamentals, news)
+- Alpha Vantage (daily OHLCV prices)
 
 ## Local Development
 
@@ -60,9 +60,10 @@ docker compose up --build
 Use .NET user secrets — never commit API keys:
 
 ```bash
-dotnet user-secrets set "Jwt:SigningKey"     "<key>" --project src/Api
-dotnet user-secrets set "Anthropic:ApiKey"  "<key>" --project src/Worker
-dotnet user-secrets set "Finnhub:ApiKey"    "<key>" --project src/Worker
+dotnet user-secrets set "Jwt:SigningKey"        "<key>" --project src/Api
+dotnet user-secrets set "Anthropic:ApiKey"     "<key>" --project src/Worker
+dotnet user-secrets set "Finnhub:ApiKey"       "<key>" --project src/Worker
+dotnet user-secrets set "AlphaVantage:ApiKey"  "<key>" --project src/Worker
 ```
 
 ### Migrations
@@ -80,24 +81,37 @@ Always review generated migrations before committing.
 dotnet test
 ```
 
-## Market Data — Finnhub
+## Market Data
 
-Market data (prices, fundamentals, news) is fetched from [Finnhub](https://finnhub.io) by the nightly Worker job.
+### Finnhub (fundamentals + news)
+
+Fundamentals and news are fetched from [Finnhub](https://finnhub.io).
 
 **Free-tier limits:** 60 API calls per minute.
 
 | Nightly job | Calls per ticker | 10 tickers |
 |---|---|---|
-| `PriceSyncJob` | 1 | 10 |
 | `FundamentalsSyncJob` | 1 | 10 |
 | `NewsSyncJob` | 1 | 10 |
-| **Total** | **3** | **30** |
+| **Total** | **2** | **20** |
 
-30 calls per nightly run is well within the 60 req/min limit. The limit is easy to trip during **manual debugging** — repeated job triggers or tight loops will hit it quickly.
+20 calls per nightly run is well within the free-tier limit. The limit is easy to trip during **manual debugging** — repeated job triggers will hit it quickly. The HTTP client handles 429 by waiting for the `Retry-After` duration and retrying once.
 
-The HTTP client handles 429 responses by waiting 60 seconds (or the `Retry-After` header value if present) and retrying once before failing. Do not add tight retry loops on top of this.
+**Terms of Service:** Finnhub's free tier permits this use case. Do not redistribute raw data or make the app publicly available at scale without reviewing their ToS.
 
-**Terms of Service:** Finnhub's free tier permits this use case. Do not redistribute raw Finnhub data or make the app publicly available at scale without reviewing their ToS.
+### Alpha Vantage (prices)
+
+Daily OHLCV price history is fetched from [Alpha Vantage](https://www.alphavantage.co).
+
+**Free-tier limits:** 25 API calls per day.
+
+| Nightly job | Calls per ticker | 10 tickers |
+|---|---|---|
+| `PriceSyncJob` | 1 | 10 |
+
+10 calls per nightly run leaves 15 calls for manual debugging. **Do not trigger `PriceSyncJob` repeatedly in one day** — there is no automatic recovery once the daily limit is exhausted. Use `Worker:Jobs:0=Prices` to run only that job when testing.
+
+Alpha Vantage does not return HTTP 429 on rate limit — it returns HTTP 200 with an `"Information"` field in the body. The provider detects this and skips the ticker gracefully rather than crashing.
 
 ## Deployment
 

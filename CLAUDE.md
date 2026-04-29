@@ -33,8 +33,9 @@ Blazor client → ASP.NET API → Postgres (reads cached data)
 - Docker + Docker Compose for local dev
 - **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud Load Balancing, Secret Manager, Filestore for Postgres data, Cloud Scheduler for Worker job)
 - GitHub Actions for CI/CD (Workload Identity Federation auth to GCP)
-- **Anthropic Claude API** for analysis generation (`claude-sonnet-4-20250514`)
-- **Finnhub** for market data (fundamentals, prices, news)
+- **Anthropic Claude API** for analysis generation (`claude-sonnet-4-5`)
+- **Finnhub** for market data (fundamentals, news) — free tier covers both
+- **Alpha Vantage** for daily OHLCV price history — free tier is 25 req/day
 
 ## Development Workflow
 
@@ -96,22 +97,32 @@ dotnet test
 - Access tokens short-lived (15 min), refresh tokens longer (7 days), rotated on use.
 - Every non-public endpoint requires `[Authorize]`. Audit this on every PR — it's easy to forget.
 
-## Market Data (Finnhub)
+## Market Data
 
-- One `IMarketDataProvider` interface, `FinnhubMarketDataProvider` as the concrete implementation. Keep the interface provider-agnostic so swapping providers is possible.
+Market data is split across two providers. The interface split reflects this: `IPriceDataProvider` (Alpha Vantage) and `ICompanyDataProvider` (Finnhub). Both use typed `HttpClient`s via `IHttpClientFactory`. Never `new HttpClient()`.
+
+### Finnhub (fundamentals + news)
+
+- `FinnhubMarketDataProvider` implements `ICompanyDataProvider`.
 - API key in user secrets locally, GCP Secret Manager in prod. Fail fast at startup if missing.
-- Use `IHttpClientFactory` with a named/typed client for Finnhub. Never `new HttpClient()`.
-- Wrap every Finnhub call in **Polly** policies: retry with exponential backoff on 5xx + timeouts, circuit breaker on sustained failures.
-- **Handle HTTP 429 (rate limit) explicitly** — back off, do not retry immediately. Finnhub's free tier is 60 req/min, which is plenty for a 10-ticker nightly job but easy to trip during debugging.
-- **Weekends and US market holidays return no new prices.** The job must treat "no new data since yesterday" as a successful no-op, not a failure.
+- Wrap every call in **Polly** policies: retry with exponential backoff on 5xx, circuit breaker on sustained failures.
+- **Handle HTTP 429 explicitly** — back off, do not retry immediately. Free tier is 60 req/min, plenty for a 10-ticker nightly job but easy to trip during debugging.
 - If Finnhub returns an error for one ticker mid-batch, continue with the rest. One bad ticker must not take down the whole job.
-- Document Finnhub's free-tier limits in the README. Know the limits before you debug against the real API.
-- **Terms of Service:** Finnhub's free tier permits this use case — check before ever redistributing data or going public.
+- **Terms of Service:** Finnhub's free tier permits this use case — check before redistributing data or going public.
+
+### Alpha Vantage (prices)
+
+- `AlphaVantagePriceProvider` implements `IPriceDataProvider`.
+- API key appended as a query parameter via `AlphaVantageApiKeyHandler` (a `DelegatingHandler`).
+- **Free tier: 25 req/day.** For 10 tickers that's 10 calls per nightly run — enough, but leaves little headroom for debugging. Trigger `PriceSyncJob` in isolation when testing (`Worker:Jobs:0=Prices`).
+- **Rate limits are not signalled via HTTP 429.** Alpha Vantage returns HTTP 200 with an `"Information"` field in the body instead of price data. The provider detects this, logs a warning, and returns empty for that ticker — it does not throw.
+- **Weekends and US market holidays return no new prices.** Treat "no new data" as a successful no-op.
+- `outputsize=compact` returns the last 100 trading days — enough for the 14-day chart and moving averages without over-fetching.
 
 ## Claude API Integration
 
 - API key stored in GCP Secret Manager (prod) or user secrets (local). Never in `appsettings.json`, never in code.
-- Use `claude-sonnet-4-20250514` unless there's a specific reason to change.
+- Use `claude-sonnet-4-5` unless there's a specific reason to change.
 - **Prompt structure for the analysis job:**
   1. System role: financial analyst writing a compact daily brief
   2. Injected data block: today's price action (with deltas vs moving averages and 52-week range), fundamentals snapshot, 2–3 news headlines with timestamps, one-sentence summary of yesterday's analysis for delta-awareness
@@ -181,7 +192,7 @@ Each job:
   - `Postgres` — Cloud Run service, `minInstances=1`, `maxInstances=1`, Filestore-mounted data directory. **No rolling updates.** Deployment briefly takes Postgres offline.
   - `Worker` — **not a Cloud Run service.** Triggered by Cloud Scheduler as a Cloud Run Job at 02:00 UTC. Runs the job chain and exits.
 - **Networking:** VPC with public and private subnets. Load balancer in public subnet, all Cloud Run services in private subnet via VPC connector. Postgres firewall rules allow traffic only from Api and Worker service accounts.
-- **Secrets:** GCP Secret Manager for DB password, JWT signing key, Anthropic API key, Finnhub API key. Service accounts grant each service access to only its own secrets.
+- **Secrets:** GCP Secret Manager for DB password, JWT signing key, Anthropic API key, Finnhub API key, Alpha Vantage API key. Service accounts grant each service access to only its own secrets.
 - **Logs:** Cloud Logging per service, retention 7–14 days (demo cost).
 - **Billing alert** at $20/month. Non-negotiable — catches misconfigurations before they're expensive.
 - **Infrastructure-as-code:** Pulumi in C# keeps the stack in the same language as the app. Do not provision GCP resources by hand in the console beyond the initial project bootstrap.
