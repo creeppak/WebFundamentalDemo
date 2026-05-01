@@ -42,9 +42,6 @@ label() {
 label "$BLUE"   "Api"    dotnet run --no-build --project src/Api    --launch-profile http &
 PID_API=$!
 
-label "$YELLOW" "Worker" dotnet run --no-build --project src/Worker &
-PID_WORKER=$!
-
 label "$GREEN"  "Web"    dotnet run --no-build --project src/Web    --launch-profile http &
 PID_WEB=$!
 
@@ -52,8 +49,8 @@ PID_WEB=$!
 cleanup() {
     printf "\n"
     log "Shutting down..."
-    kill "$PID_API" "$PID_WORKER" "$PID_WEB" 2>/dev/null || true
-    wait "$PID_API" "$PID_WORKER" "$PID_WEB" 2>/dev/null || true
+    kill "$PID_API" "$PID_WEB" 2>/dev/null || true
+    wait "$PID_API" "$PID_WEB" 2>/dev/null || true
     docker compose stop postgres
     log "Done."
 }
@@ -66,4 +63,4 @@ printf "\n"
 info "Ctrl+C to stop all services"
 printf "\n"
 
-wait "$PID_API" "$PID_WORKER" "$PID_WEB"
+wait "$PID_API" "$PID_WEB"
