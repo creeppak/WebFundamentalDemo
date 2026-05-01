@@ -13,10 +13,7 @@
         <MudText Typo="Typo.h6" Class="ml-3">Virtual Stock Trader</MudText>
         <MudSpacer />
     </MudAppBar>
-    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" Elevation="2">
-        <MudDrawerHeader>
-            <MudText Typo="Typo.subtitle1" Class="mt-1">Navigation</MudText>
-        </MudDrawerHeader>
+    <MudDrawer @bind-Open="_drawerOpen" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always" Elevation="1">
         <NavMenu />
     </MudDrawer>
     <MudMainContent>

@@ -78,9 +78,12 @@ else
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" md="5">
+        <MudItem xs="12" md="4">
             <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudText Typo="Typo.subtitle1" GutterBottom="true">Fundamentals</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Analytics" />
+                    <MudText Typo="Typo.h5">Fundamentals</MudText>
+                </MudStack>
                 @if (_stock.Fundamentals is null)
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">Fundamentals not yet available.</MudAlert>
@@ -99,15 +102,18 @@ else
                         @FundamentalRow("Industry",       f.Industry ?? "—")
                     </MudGrid>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
-                        As of @f.Date.ToString("MMM d, yyyy") · Data delayed ~15 minutes
+                        As of @f.Date.ToString("MMM d, yyyy")
                     </MudText>
                 }
             </MudPaper>
         </MudItem>
 
-        <MudItem xs="12" md="7">
+        <MudItem xs="12" md="8">
             <MudPaper Elevation="1" Class="pa-4" Style="height:100%">
-                <MudText Typo="Typo.subtitle1" GutterBottom="true">AI Analysis</MudText>
+                <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="1" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" />
+                    <MudText Typo="Typo.h5">AI Analysis</MudText>
+                </MudStack>
                 @if (_stock.LatestAnalysis is null)
                 {
                     <MudAlert Severity="Severity.Info" Dense="true">Analysis not yet available.</MudAlert>
@@ -115,13 +121,21 @@ else
                 else
                 {
                     var a = _stock.LatestAnalysis;
-                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
-                        AI-generated · Not financial advice
-                    </MudAlert>
-                    <MudText Typo="Typo.body2">@a.Analysis</MudText>
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
                         Generated @a.GeneratedAt.ToString("MMM d, yyyy") for @a.Date.ToString("MMM d, yyyy")
                     </MudText>
+                    <MudText Typo="Typo.body1">@a.Summary</MudText>
+                    <MudButton Variant="Variant.Text"
+                               Size="Size.Small"
+                               Class="mt-2 px-2"
+                               StartIcon="@(_analysisExpanded ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
+                               OnClick="@(() => _analysisExpanded = !_analysisExpanded)">
+                        @(_analysisExpanded ? "Hide detailed analysis" : "See detailed analysis")
+                    </MudButton>
+                    @if (_analysisExpanded)
+                    {
+                        <MudText Typo="Typo.body1" Class="mt-2">@a.Analysis</MudText>
+                    }
                 }
             </MudPaper>
         </MudItem>
@@ -165,6 +179,7 @@ else
     private IReadOnlyList<NewsArticleDto> _news = [];
     private HoldingDto? _holding;
     private bool _loading = true;
+    private bool _analysisExpanded;
 
     private List<ChartSeries<double>> _series = [];
     private string[] _xLabels = [];
