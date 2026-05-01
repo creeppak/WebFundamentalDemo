@@ -1,6 +1,8 @@
 @inherits LayoutComponentBase
-
+@inject AuthenticationStateProvider AuthStateProvider
+@implements IDisposable
 <MudThemeProvider />
+<MudPopoverProvider />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
@@ -25,5 +27,24 @@
 </MudLayout>
 
 @code {
-    private bool _drawerOpen = true;
+    private bool _drawerOpen;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        _drawerOpen = state.User.Identity?.IsAuthenticated == true;
+        AuthStateProvider.AuthenticationStateChanged += OnAuthStateChanged;
+    }
+
+    private async void OnAuthStateChanged(Task<AuthenticationState> task)
+    {
+        var state = await task;
+        _drawerOpen = state.User.Identity?.IsAuthenticated == true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthStateChanged;
+    }
 }

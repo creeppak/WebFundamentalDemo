@@ -1,4 +1,5 @@
 @page "/stocks/{Ticker}"
+@using System.Globalization
 @attribute [Authorize]
 @inject StocksClient StocksClient
 @inject PortfolioClient PortfolioClient
@@ -20,6 +21,8 @@ else if (_stock is null)
 }
 else
 {
+    <MudButton Href="/stocks" StartIcon="@Icons.Material.Filled.ArrowBack" Variant="Variant.Text" Class="mb-2">Back to stocks</MudButton>
+
     <MudGrid Spacing="4">
 
         <MudItem xs="12">
@@ -63,11 +66,14 @@ else
                 }
                 else
                 {
-                    <MudChart ChartType="ChartType.Line"
+                    <MudChart T="double"
+                              ChartType="ChartType.Line"
                               ChartSeries="@_series"
-                              XAxisLabels="@_xLabels"
+                              ChartLabels="@_xLabels"
                               Width="100%" Height="280px"
-                              ChartOptions="@_chartOptions" />
+                              ChartOptions="@_chartOptions"
+                              MatchBoundsToSize="true"
+                              Class="mud-width-full" />
                 }
             </MudPaper>
         </MudItem>
@@ -160,9 +166,9 @@ else
     private HoldingDto? _holding;
     private bool _loading = true;
 
-    private List<ChartSeries> _series = [];
+    private List<ChartSeries<double>> _series = [];
     private string[] _xLabels = [];
-    private readonly ChartOptions _chartOptions = new() { YAxisTicks = 4, LineStrokeWidth = 2 };
+    private readonly ChartOptions _chartOptions = new() { ShowLegend = false };
 
     protected override async Task OnInitializedAsync()
     {
@@ -180,8 +186,8 @@ else
 
         if (_history.Count > 0)
         {
-            _xLabels = _history.Select(p => p.Date.ToString("MMM d")).ToArray();
-            _series  = [new ChartSeries { Name = Ticker, Data = _history.Select(p => (double)p.Close).ToArray() }];
+            _xLabels = _history.Select(p => p.Date.ToString("MMM d", CultureInfo.InvariantCulture)).ToArray();
+            _series  = [new ChartSeries<double> { Name = Ticker, Data = _history.Select(p => (double)p.Close).ToArray() }];
         }
 
         _loading = false;

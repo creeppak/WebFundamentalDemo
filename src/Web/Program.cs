@@ -13,9 +13,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
     ?? throw new InvalidOperationException("Api:BaseUrl is not configured.");
 
-// Auth: single instance shared between state provider and the message handler.
-builder.Services.AddScoped<AppAuthenticationStateProvider>();
-builder.Services.AddScoped<AuthenticationStateProvider>(sp =>
+// Singleton so IHttpClientFactory's internal scope gets the same instance as components.
+builder.Services.AddSingleton<AppAuthenticationStateProvider>();
+builder.Services.AddSingleton<AuthenticationStateProvider>(sp =>
     sp.GetRequiredService<AppAuthenticationStateProvider>());
 builder.Services.AddAuthorizationCore();
 

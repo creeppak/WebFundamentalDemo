@@ -1,7 +1,76 @@
-﻿@page "/"
+@page "/"
+@inject NavigationManager Navigation
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthStateProvider
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Virtual Stock Trader</PageTitle>
 
-<h1>Hello, world!</h1>
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-12">
+    <MudStack Spacing="6" AlignItems="AlignItems.Center">
 
-Welcome to your new app.
+        <MudStack Spacing="2" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h3" Align="Align.Center">
+                <b>Virtual Stock Trader</b>
+            </MudText>
+            <MudText Typo="Typo.subtitle1" Align="Align.Center" Color="Color.Secondary">
+                Explore real stock fundamentals and AI-generated analysis — with virtual money, zero risk.
+            </MudText>
+        </MudStack>
+
+        <MudDivider Style="width: 100%" />
+
+        <MudText Typo="Typo.body1" Align="Align.Center">
+            Register an account, receive a virtual cash balance, and buy or sell a curated set of stocks.
+            Each stock page shows key fundamentals, a 14-day price chart, and an AI-generated analysis
+            refreshed every night.
+        </MudText>
+
+        <MudPaper Outlined="true" Class="pa-4 rounded-lg" Style="width: 100%">
+            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                <MudIcon Icon="@Icons.Custom.Brands.GitHub" Color="Color.Default" />
+                <MudStack Spacing="0">
+                    <MudText Typo="Typo.body2">
+                        <b>Open source</b>
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        The full source code is publicly available on GitHub. Feel free to explore, fork, or contribute.
+                    </MudText>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <MudText Typo="Typo.body1" Align="Align.Center">
+            Ready to try it? Register an account and place your first trade in under a minute.
+        </MudText>
+
+        <MudStack Row="true" Spacing="3" Justify="Justify.Center" Style="flex-wrap: wrap;">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       StartIcon="@Icons.Custom.Brands.GitHub"
+                       Size="Size.Large">
+                Open GitHub Repository
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       EndIcon="@Icons.Material.Filled.TrendingUp"
+                       Size="Size.Large"
+                       OnClick="@StartTrading">
+                Start Trading
+            </MudButton>
+        </MudStack>
+
+        <MudText Typo="Typo.caption" Align="Align.Center" Color="Color.Secondary">
+            Stock data is delayed ~15&nbsp;minutes. AI-generated analyses are not financial advice.
+        </MudText>
+
+    </MudStack>
+</MudContainer>
+
+@code {
+    private async Task StartTrading()
+    {
+        var state = await AuthStateProvider.GetAuthenticationStateAsync();
+        var destination = state.User.Identity?.IsAuthenticated == true ? "/stocks" : "/register";
+        Navigation.NavigateTo(destination);
+    }
+}

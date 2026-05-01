@@ -51,8 +51,9 @@ var anthropicApiKey = builder.Configuration["Anthropic:ApiKey"]
 var alphaVantageApiKey = builder.Configuration["AlphaVantage:ApiKey"]
     ?? throw new InvalidOperationException("AlphaVantage:ApiKey is not configured.");
 
-var blazorOrigin = builder.Configuration["Cors:AllowedOrigin"]
-    ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured.");
+var blazorOrigins = (builder.Configuration["Cors:AllowedOrigin"]
+    ?? throw new InvalidOperationException("Cors:AllowedOrigin is not configured."))
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -84,7 +85,7 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy => policy
-        .WithOrigins(blazorOrigin)
+        .WithOrigins(blazorOrigins)
         .AllowAnyMethod()
         .AllowAnyHeader()
         .AllowCredentials());
