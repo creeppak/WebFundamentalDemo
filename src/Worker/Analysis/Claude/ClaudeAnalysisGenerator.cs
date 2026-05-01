@@ -107,17 +107,29 @@ public class ClaudeAnalysisGenerator(
 
     private static AnalysisResult ParseResponse(string text, int inputTokens, int outputTokens)
     {
-        try
-        {
-            var parsed = JsonSerializer.Deserialize<StructuredOutput>(text);
-            if (parsed?.Analysis is not null && parsed.Summary is not null)
-                return new AnalysisResult(parsed.Analysis, parsed.Summary, inputTokens, outputTokens);
-        }
-        catch (JsonException) { }
+        var json = ExtractJson(text);
+        var parsed = JsonSerializer.Deserialize<StructuredOutput>(json)
+            ?? throw new InvalidOperationException("Claude returned null when deserializing structured output.");
 
-        // Fall back to using the full text as analysis; first sentence as summary.
-        var summary = text.Split('.', 2)[0].Trim() + ".";
-        return new AnalysisResult(text, summary, inputTokens, outputTokens);
+        if (parsed.Analysis is null || parsed.Summary is null)
+            throw new InvalidOperationException(
+                $"Claude response missing required fields. analysis={parsed.Analysis is null}, summary={parsed.Summary is null}");
+
+        return new AnalysisResult(parsed.Analysis, parsed.Summary, inputTokens, outputTokens);
+    }
+
+    private static string ExtractJson(string text)
+    {
+        var start = text.IndexOf("```json", StringComparison.Ordinal);
+        if (start == -1)
+            return text;
+
+        start += "```json".Length;
+        var end = text.IndexOf("```", start, StringComparison.Ordinal);
+        if (end == -1)
+            throw new InvalidOperationException("Claude response has opening ```json fence but no closing ```.");
+
+        return text[start..end].Trim();
     }
 
     private sealed record StructuredOutput(
