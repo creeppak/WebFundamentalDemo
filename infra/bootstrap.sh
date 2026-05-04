@@ -27,7 +27,9 @@ if [ -z "$BILLING_ACCOUNT" ]; then
     exit 1
 fi
 
-echo "==> Project: $PROJECT_ID"
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+
+echo "==> Project: $PROJECT_ID ($PROJECT_NUMBER)"
 echo "==> Billing account: $BILLING_ACCOUNT"
 
 # Link billing account to project (no-op if already linked).
@@ -53,6 +55,7 @@ gcloud services enable \
 # Create a $20/month billing alert with notifications at 50% and 100%.
 # Idempotency: gcloud will error if a budget with this name already exists;
 # re-running the script safely skips this block.
+# Make sure the correct currency type is used below.
 echo "==> Creating billing alert..."
 if gcloud billing budgets list \
         --billing-account="$BILLING_ACCOUNT" \
@@ -63,10 +66,10 @@ else
     gcloud billing budgets create \
         --billing-account="$BILLING_ACCOUNT" \
         --display-name="webfundamentaldemo-20-monthly" \
-        --budget-amount=20USD \
+        --budget-amount=75PLN \
         --threshold-rule=percent=0.5 \
         --threshold-rule=percent=1.0 \
-        --projects="projects/$PROJECT_ID"
+        --filter-projects="projects/$PROJECT_ID"
     echo "    Budget created."
 fi
 
