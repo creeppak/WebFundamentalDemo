@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Components.Authorization;
 using Shared.Auth;
+using Web.Clients;
 
 namespace Web.Auth;
 
@@ -26,6 +27,13 @@ public class AppAuthenticationStateProvider : AuthenticationStateProvider
         var claims = ParseClaimsFromJwt(token);
         var identity = new ClaimsIdentity(claims, "jwt");
         return Task.FromResult(new AuthenticationState(new ClaimsPrincipal(identity)));
+    }
+
+    public async Task TryRestoreSessionAsync(AuthClient authClient)
+    {
+        var response = await authClient.RefreshAsync();
+        if (response is not null)
+            NotifyLogin(response);
     }
 
     public void NotifyLogin(AccessTokenResponse response)

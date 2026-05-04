@@ -1,10 +1,11 @@
 using System.Security.Claims;
+using Api.Portfolio;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Portfolio;
 
-namespace Api.Portfolio;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/portfolio")]

@@ -81,8 +81,8 @@ else
     private static Color TypeColor(string type) => type switch
     {
         "Deposit" => Color.Info,
-        "Buy"     => Color.Primary,
-        "Sell"    => Color.Warning,
+        "Buy"     => Color.Success,
+        "Sell"    => Color.Error,
         _         => Color.Default
     };
 
@@ -95,7 +95,7 @@ else
 
     private static string FormatTotal(TransactionDto t) => t.TransactionType switch
     {
-        "Deposit" => $"+${t.Price:N2}",
+        "Deposit" => $"+${t.Quantity:N2}",
         "Buy"     => $"-${t.Price * t.Quantity:N2}",
         "Sell"    => $"+${t.Price * t.Quantity:N2}",
         _         => $"${t.Price * t.Quantity:N2}"

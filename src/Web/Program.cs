@@ -21,8 +21,16 @@ builder.Services.AddAuthorizationCore();
 
 builder.Services.AddTransient<AuthorizationMessageHandler>();
 
-// AuthClient has no handler — it IS the auth client (login, refresh, logout).
-builder.Services.AddHttpClient<AuthClient>(c => c.BaseAddress = new Uri(apiBaseUrl));
+// In development the API runs on a different port (cross-origin), so cookies are not
+// sent by default. CookieCredentialsHandler sets credentials:include on AuthClient
+// requests so the HttpOnly refresh-token cookie is sent and Set-Cookie is accepted.
+// In production Web and API share the same origin, so this handler is not needed.
+var authClientBuilder = builder.Services.AddHttpClient<AuthClient>(c => c.BaseAddress = new Uri(apiBaseUrl));
+if (builder.HostEnvironment.IsDevelopment())
+{
+    builder.Services.AddTransient<CookieCredentialsHandler>();
+    authClientBuilder.AddHttpMessageHandler<CookieCredentialsHandler>();
+}
 
 // All other clients attach the Bearer token and auto-refresh on 401.
 builder.Services.AddHttpClient<StocksClient>(c => c.BaseAddress = new Uri(apiBaseUrl))
@@ -32,4 +40,13 @@ builder.Services.AddHttpClient<PortfolioClient>(c => c.BaseAddress = new Uri(api
 
 builder.Services.AddMudServices();
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+// Attempt silent token refresh on startup so a page reload doesn't force re-login.
+// The HttpOnly refresh-token cookie (set by the API) survives the reload; the in-memory
+// access token does not. This restores the session before the UI renders.
+var authProvider = host.Services.GetRequiredService<AppAuthenticationStateProvider>();
+var authClient = host.Services.GetRequiredService<AuthClient>();
+await authProvider.TryRestoreSessionAsync(authClient);
+
+await host.RunAsync();

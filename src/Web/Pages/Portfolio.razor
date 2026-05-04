@@ -20,19 +20,19 @@ else
     <MudGrid Spacing="3" Class="mb-6">
         <MudItem xs="12" sm="4">
             <MudPaper Elevation="1" Class="pa-4">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Cash Balance</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Primary">Cash Balance</MudText>
                 <MudText Typo="Typo.h5">@FormatMoney(_portfolio.CashBalance)</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="12" sm="4">
             <MudPaper Elevation="1" Class="pa-4">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Market Value</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Primary">Market Value</MudText>
                 <MudText Typo="Typo.h5">@FormatMoney(_portfolio.TotalMarketValue)</MudText>
             </MudPaper>
         </MudItem>
         <MudItem xs="12" sm="4">
             <MudPaper Elevation="1" Class="pa-4">
-                <MudText Typo="Typo.caption" Color="Color.Secondary">Unrealized P&amp;L</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Primary">Unrealized P&amp;L</MudText>
                 <MudText Typo="Typo.h5" Color="@PnLColor(_portfolio.TotalUnrealizedPnL)">
                     @FormatPnL(_portfolio.TotalUnrealizedPnL)
                 </MudText>
@@ -84,11 +84,11 @@ else
                 </MudTd>
                 <MudTd>
                     <MudStack Row="true" Spacing="1" Justify="Justify.FlexEnd">
-                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Primary"
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Success"
                                    OnClick="@(() => OpenTradeDialog(context, true))">
                             Buy
                         </MudButton>
-                        <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning"
+                        <MudButton Size="Size.Small" Variant="Variant.Filled" Color="Color.Error"
                                    OnClick="@(() => OpenTradeDialog(context, false))">
                             Sell
                         </MudButton>

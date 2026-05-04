@@ -40,7 +40,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Disabled="_submitting">Cancel</MudButton>
-        <MudButton Color="@(IsBuy ? Color.Primary : Color.Warning)"
+        <MudButton Color="@(IsBuy ? Color.Success : Color.Error)"
                    Variant="Variant.Filled"
                    OnClick="Submit"
                    Disabled="_submitting">

@@ -1,8 +1,9 @@
+using Api.Stocks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Shared.Stocks;
 
-namespace Api.Stocks;
+namespace Api.Controllers;
 
 [ApiController]
 [Route("api/stocks")]

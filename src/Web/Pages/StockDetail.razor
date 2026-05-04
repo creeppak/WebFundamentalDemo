@@ -37,11 +37,11 @@ else
                         @FormatChange(_stock.DayChangePercent)
                     </MudText>
                     <MudStack Row="true" Spacing="2">
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary"
+                        <MudButton Variant="Variant.Filled" Color="Color.Success"
                                    Size="Size.Small" OnClick="OpenBuyDialog">
                             Buy
                         </MudButton>
-                        <MudButton Variant="Variant.Outlined" Color="Color.Warning"
+                        <MudButton Variant="Variant.Filled" Color="Color.Error"
                                    Size="Size.Small" OnClick="OpenSellDialog"
                                    Disabled="@(_holding is null)">
                             Sell
@@ -121,11 +121,15 @@ else
                 else
                 {
                     var a = _stock.LatestAnalysis;
-                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                        Generated @a.GeneratedAt.ToString("MMM d, yyyy") for @a.Date.ToString("MMM d, yyyy")
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2 d-block">
+                        Generated @a.GeneratedAt.ToString("MMM d, yyyy")
                     </MudText>
-                    <MudText Typo="Typo.body1">@a.Summary</MudText>
-                    <MudButton Variant="Variant.Text"
+                    @if (!_analysisExpanded)
+                    {
+                        <MudText @key="@("summary")" Typo="Typo.body1">@a.Summary</MudText>
+                    }
+                    <MudButton @key="@("toggle")"
+                               Variant="Variant.Text"
                                Size="Size.Small"
                                Class="mt-2 px-2"
                                StartIcon="@(_analysisExpanded ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)"
@@ -134,7 +138,7 @@ else
                     </MudButton>
                     @if (_analysisExpanded)
                     {
-                        <MudText Typo="Typo.body1" Class="mt-2">@a.Analysis</MudText>
+                        <MudText @key="@("analysis")" Typo="Typo.body1" Class="mt-2">@a.Analysis</MudText>
                     }
                 }
             </MudPaper>
@@ -154,7 +158,7 @@ else
                         {
                             <MudListItem>
                                 <MudStack Spacing="0">
-                                    <MudLink Href="@article.Url" Target="_blank" Typo="Typo.body2">
+                                    <MudLink Href="@article.Url" Target="_blank" Typo="Typo.body2" Color="Color.Default">
                                         @article.Headline
                                     </MudLink>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">

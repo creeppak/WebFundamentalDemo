@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <title>Virtual Stock Trader</title>
+  <path d="M 64 8 Q 48 8 38 16 Q 28 22 24 34 Q 18 38 16 48 Q 14 58 18 66 Q 18 76 24 84 Q 28 96 38 104 Q 44 114 56 118 Q 64 122 72 118 Q 84 114 90 104 Q 100 96 104 84 Q 110 76 110 66 Q 114 58 112 48 Q 110 38 104 34 Q 100 22 90 16 Q 80 8 64 8 Z" fill="#252525" stroke="#676767" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M 30 32 Q 36 22 50 18 Q 64 14 78 18 Q 92 22 98 32 Q 88 28 78 28 Q 64 26 50 28 Q 40 28 30 32 Z" fill="#443831" opacity="0.7"/>
+  <path d="M 24 48 Q 34 40 50 40 Q 56 44 56 50 Q 54 56 46 56 Q 32 56 24 48 Z" fill="#161616"/>
+  <path d="M 104 48 Q 94 40 78 40 Q 72 44 72 50 Q 74 56 82 56 Q 96 56 104 48 Z" fill="#161616"/>
+  <ellipse cx="44" cy="58" rx="7" ry="8" fill="#251B14"/>
+  <circle cx="46" cy="55" r="2" fill="#D6AA7B" opacity="0.9"/>
+  <ellipse cx="84" cy="58" rx="7" ry="8" fill="#251B14"/>
+  <circle cx="86" cy="55" r="2" fill="#D6AA7B" opacity="0.9"/>
+  <path d="M 44 70 Q 48 66 56 66 Q 64 64 72 66 Q 80 66 84 70 Q 88 80 86 92 Q 84 102 76 106 Q 64 110 52 106 Q 44 102 42 92 Q 40 80 44 70 Z" fill="#725E4D"/>
+  <path d="M 56 78 Q 64 74 72 78" stroke="#251B14" stroke-width="1.2" fill="none" stroke-linecap="round" opacity="0.5"/>
+  <ellipse cx="58" cy="86" rx="2" ry="2.5" fill="#251B14"/>
+  <ellipse cx="70" cy="86" rx="2" ry="2.5" fill="#251B14"/>
+  <path d="M 54 96 Q 64 100 74 96" stroke="#251B14" stroke-width="2" fill="none" stroke-linecap="round"/>
+</svg>
