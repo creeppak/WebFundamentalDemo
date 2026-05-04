@@ -49,11 +49,33 @@ dotnet run --project src/Worker
 dotnet run --project src/Web
 ```
 
-Full stack in Docker:
+**Full stack in Docker** (first-time setup):
 
 ```bash
+# 1. Copy the secrets template and fill in real API keys
+cp .env.example .env
+
+# 2. Start Postgres and apply migrations
+docker compose up -d postgres
+dotnet ef database update --project src/Api
+
+# 3. Build and start all services
 docker compose up --build
 ```
+
+The app is then available at:
+- Web: http://localhost:5081
+- Api: http://localhost:5052
+
+Subsequent runs only need `docker compose up` (no `--build` unless code changed).
+
+**Running Worker jobs manually** (Docker):
+
+```bash
+docker compose run --rm worker
+```
+
+The Worker is excluded from the default `docker compose up` because it runs the full job chain and exits — it is not a long-running service.
 
 ### Secrets (local)
 

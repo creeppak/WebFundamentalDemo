@@ -34,8 +34,8 @@ riderModule.iml
 .env.local
 .env.*.local
 
-# Docker
-docker-compose.override.yml
+# Docker — personal local overrides only (shared dev override is committed)
+# docker-compose.override.yml
 
 # Test results
 TestResults/

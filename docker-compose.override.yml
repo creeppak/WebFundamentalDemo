@@ -1,0 +1,6 @@
+# Dev overrides — applied automatically by `docker compose up`.
+# Switches the API to Development mode (verbose logs, Swagger UI, dev exception page).
+services:
+  api:
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

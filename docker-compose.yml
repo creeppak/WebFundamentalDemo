@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:16-alpine
     environment:
@@ -14,6 +15,65 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: src/Api/Dockerfile
+    ports:
+      - "5052:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=webfundamentaldemo;Username=postgres;Password=postgres"
+      Jwt__Issuer: webfundamentaldemo-api
+      Jwt__Audience: webfundamentaldemo-web
+      Jwt__SigningKey: "${JWT_SIGNING_KEY}"
+      Finnhub__ApiKey: "${FINNHUB_API_KEY}"
+      Anthropic__ApiKey: "${ANTHROPIC_API_KEY}"
+      AlphaVantage__ApiKey: "${ALPHA_VANTAGE_API_KEY}"
+      Cors__AllowedOrigin: "http://localhost:5081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Web/Dockerfile
+    ports:
+      - "5081:80"
+    environment:
+      # Rewritten into appsettings.json at container start by docker-entrypoint.sh.
+      # Must be reachable from the user's browser, not the Docker network.
+      API_BASE_URL: "http://localhost:5052"
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Worker runs the nightly job chain and exits — it is not a long-running service.
+  # Excluded from `docker compose up` by default; trigger manually:
+  #   docker compose run --rm worker
+  worker:
+    build:
+      context: .
+      dockerfile: src/Worker/Dockerfile
+    restart: "no"
+    environment:
+      ConnectionStrings__Postgres: "Host=postgres;Port=5432;Database=webfundamentaldemo;Username=postgres;Password=postgres"
+      Finnhub__ApiKey: "${FINNHUB_API_KEY}"
+      Anthropic__ApiKey: "${ANTHROPIC_API_KEY}"
+      AlphaVantage__ApiKey: "${ALPHA_VANTAGE_API_KEY}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - worker
 
 volumes:
   postgres_data:
