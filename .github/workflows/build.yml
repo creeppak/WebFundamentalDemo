@@ -15,6 +15,7 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+      - run: dotnet workload install wasm-tools-net8
       - run: dotnet restore
       - run: dotnet build --no-restore --configuration Release
       - run: dotnet test --no-build --configuration Release
