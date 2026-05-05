@@ -137,14 +137,102 @@ Alpha Vantage does not return HTTP 429 on rate limit — it returns HTTP 200 wit
 
 ## Deployment
 
-Deployed to GCP. See `infra/` for Pulumi stack (C#). Estimated cost: ~$15/month.
+Deployed to GCP via Pulumi (C# stack in `infra/`). Estimated cost: ~$15/month.
 
-- **Api** — Cloud Run service, public HTTPS via Cloud Run domain mapping (`api.{domain}`)
-- **Web** — Nginx container serving Blazor WASM static files, Cloud Run domain mapping (`app.{domain}`)
-- **Postgres** — Cloud SQL `db-f1-micro`, private IP via VPC peering (no public exposure)
-- **Worker** — Cloud Scheduler triggers a Cloud Run Job at 02:00 UTC nightly
+| Service | What runs it |
+|---|---|
+| Api | Cloud Run service — public HTTPS via Cloud Run domain mapping at `api.{domain}` |
+| Web | Cloud Run service (Nginx + Blazor WASM static files) — domain mapping at `app.{domain}` |
+| Postgres | Cloud SQL `db-f1-micro` — private IP via VPC peering, not internet-exposed |
+| Worker | Cloud Run Job triggered by Cloud Scheduler at 02:00 UTC nightly |
 
-CI/CD via GitHub Actions (Workload Identity Federation, no long-lived keys). Migrations run as a one-off Cloud Run Job before Api deploy.
+CI/CD via GitHub Actions with Workload Identity Federation (no long-lived keys). Migrations run as a one-off Cloud Run Job before the Api revision is updated.
+
+### First-time deploy
+
+**Prerequisites:**
+- `gcloud` CLI authenticated (`gcloud auth login`)
+- `pulumi` CLI installed
+- Domain verified in [Google Search Console](https://search.google.com/search-console) — Cloud Run domain mappings fail without this
+
+**1. Bootstrap the GCP project** (enables APIs, creates billing alert — run once):
+
+```bash
+gcloud config set project <PROJECT_ID>
+export BILLING_ACCOUNT=$(gcloud billing accounts list --format='value(name)' | head -1)
+./infra/bootstrap.sh
+```
+
+**2. Configure the Pulumi stack:**
+
+```bash
+cd infra
+pulumi stack init prod
+
+# Copy the example config and edit project/domain values
+cp Pulumi.prod.yaml.example Pulumi.prod.yaml
+
+# Set the DB password as an encrypted secret (never stored in plaintext)
+pulumi config set --secret dbPassword "$(openssl rand -base64 32)"
+```
+
+**3. Deploy infrastructure:**
+
+```bash
+pulumi up
+```
+
+This creates all GCP resources — Artifact Registry, Cloud SQL, Secret Manager secrets, Cloud Run services, Cloud Scheduler, DNS zone, and Cloud Logging. The DB connection string is written to Secret Manager automatically.
+
+**4. Set API key secrets** (after `pulumi up` creates the Secret Manager entries):
+
+```bash
+echo -n "<your-jwt-signing-key>"      | gcloud secrets versions add webfundamentaldemo-jwt-signing-key      --data-file=-
+echo -n "<your-anthropic-api-key>"    | gcloud secrets versions add webfundamentaldemo-anthropic-api-key    --data-file=-
+echo -n "<your-finnhub-api-key>"      | gcloud secrets versions add webfundamentaldemo-finnhub-api-key      --data-file=-
+echo -n "<your-alpha-vantage-api-key>" | gcloud secrets versions add webfundamentaldemo-alpha-vantage-api-key --data-file=-
+```
+
+**5. Point DNS to GCP** — in your domain registrar, delegate the domain to the nameservers shown by:
+
+```bash
+gcloud dns managed-zones describe webfundamentaldemo --format='value(nameServers)'
+```
+
+TLS certificates are issued automatically by Google once DNS propagates (~10 minutes).
+
+### Subsequent deploys
+
+Build and push Docker images tagged with the Git SHA (done by CI), then re-deploy with that tag:
+
+```bash
+cd infra
+pulumi config set webfundamentaldemo:imageTag <git-sha>
+pulumi up
+```
+
+Or pass it inline without modifying the config file:
+
+```bash
+pulumi up -c webfundamentaldemo:imageTag=<git-sha>
+```
+
+### Rollback
+
+Redeploy a previous image tag by setting it back and running `pulumi up`:
+
+```bash
+pulumi config set webfundamentaldemo:imageTag <previous-git-sha>
+pulumi up
+```
+
+Alternatively, use `gcloud` directly to shift traffic without a full Pulumi run:
+
+```bash
+gcloud run services update-traffic webfundamentaldemo-api \
+  --region=europe-central2 \
+  --to-revisions=<previous-revision>=100
+```
 
 ## License
 
