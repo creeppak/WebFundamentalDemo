@@ -15,17 +15,14 @@ public class AlphaVantagePriceProviderTests
 
     private static AlphaVantagePriceProvider BuildProvider(HttpStatusCode status, string body)
     {
-        var response = new HttpResponseMessage(status)
-        {
-            Content = new StringContent(body, Encoding.UTF8, "application/json")
-        };
-        var httpClient = new HttpClient(new FakeHandler(response))
+        var httpClient = new HttpClient(new FakeHandler(status, body))
         {
             BaseAddress = new Uri("https://www.alphavantage.co/")
         };
         return new AlphaVantagePriceProvider(
             new AlphaVantageHttpClient(httpClient),
-            NullLogger<AlphaVantagePriceProvider>.Instance);
+            NullLogger<AlphaVantagePriceProvider>.Instance,
+            rateLimitDelay: TimeSpan.Zero);
     }
 
     [Fact]
@@ -138,8 +135,11 @@ public class AlphaVantagePriceProviderTests
     }
 }
 
-file sealed class FakeHandler(HttpResponseMessage response) : HttpMessageHandler
+file sealed class FakeHandler(HttpStatusCode status, string body) : HttpMessageHandler
 {
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
-        => Task.FromResult(response);
+        => Task.FromResult(new HttpResponseMessage(status)
+        {
+            Content = new StringContent(body, Encoding.UTF8, "application/json")
+        });
 }

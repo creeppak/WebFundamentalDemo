@@ -5,10 +5,10 @@ namespace Worker.MarketData.AlphaVantage;
 
 public class AlphaVantagePriceProvider(
     AlphaVantageHttpClient client,
-    ILogger<AlphaVantagePriceProvider> logger) : IPriceDataProvider
+    ILogger<AlphaVantagePriceProvider> logger,
+    TimeSpan? rateLimitDelay = null) : IPriceDataProvider
 {
-    // Alpha Vantage free tier: 5 req/min. Wait slightly over 60s so the window resets.
-    private static readonly TimeSpan RateLimitDelay = TimeSpan.FromSeconds(65);
+    private readonly TimeSpan _rateLimitDelay = rateLimitDelay ?? TimeSpan.FromSeconds(65);
     private const int MaxRateLimitRetries = 3;
 
     public async Task<IReadOnlyList<PriceBar>> GetPricesAsync(string ticker, DateOnly from, DateOnly to, CancellationToken ct)
@@ -34,9 +34,9 @@ public class AlphaVantagePriceProvider(
 
                 logger.LogWarning(
                     "Alpha Vantage rate limit reached for {Ticker} — waiting {Delay}s before retry ({Attempt}/{Max})",
-                    ticker, RateLimitDelay.TotalSeconds, attempt + 1, MaxRateLimitRetries);
+                    ticker, _rateLimitDelay.TotalSeconds, attempt + 1, MaxRateLimitRetries);
 
-                await Task.Delay(RateLimitDelay, ct);
+                await Task.Delay(_rateLimitDelay, ct);
             }
             else
             {
