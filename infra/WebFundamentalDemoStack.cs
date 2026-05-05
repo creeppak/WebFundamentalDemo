@@ -180,6 +180,7 @@ class WebFundamentalDemoStack : Stack
 
         var apiService = new CloudRunV2.Service("api", new()
         {
+            Name = "webfundamentaldemo-api",
             Location = region,
             Ingress = "INGRESS_TRAFFIC_ALL",
             Template = new CloudRunV2.Inputs.ServiceTemplateArgs
@@ -254,6 +255,7 @@ class WebFundamentalDemoStack : Stack
 
         var webService = new CloudRunV2.Service("web", new()
         {
+            Name = "webfundamentaldemo-web",
             Location = region,
             Ingress = "INGRESS_TRAFFIC_ALL",
             Template = new CloudRunV2.Inputs.ServiceTemplateArgs
@@ -298,6 +300,7 @@ class WebFundamentalDemoStack : Stack
 
         var workerJob = new CloudRunV2.Job("worker", new()
         {
+            Name = "webfundamentaldemo-worker",
             Location = region,
             Template = new CloudRunV2.Inputs.JobTemplateArgs
             {
@@ -329,6 +332,57 @@ class WebFundamentalDemoStack : Stack
                                 JobSecretEnv("Anthropic__ApiKey", anthropicKeySecret),
                                 JobSecretEnv("Finnhub__ApiKey", finnhubKeySecret),
                                 JobSecretEnv("AlphaVantage__ApiKey", alphaVantageKeySecret),
+                            },
+                            Resources = new CloudRunV2.Inputs.JobTemplateTemplateContainerResourcesArgs
+                            {
+                                Limits = new InputMap<string>
+                                {
+                                    { "cpu", "1" },
+                                    { "memory", "512Mi" },
+                                },
+                            },
+                        }
+                    },
+                },
+            },
+        });
+
+        // ── Cloud Run Job: DB Migrations ──────────────────────────────────────
+        //
+        // Triggered by the deploy workflow before updating the Api revision.
+        // MaxRetries=0 — failed migrations must not be retried automatically.
+
+        _ = new CloudRunV2.Job("migrate", new()
+        {
+            Name = "webfundamentaldemo-migrate",
+            Location = region,
+            Template = new CloudRunV2.Inputs.JobTemplateArgs
+            {
+                Template = new CloudRunV2.Inputs.JobTemplateTemplateArgs
+                {
+                    ServiceAccount = migrateSa.Email,
+                    MaxRetries = 0,
+                    Timeout = "600s",
+                    VpcAccess = new CloudRunV2.Inputs.JobTemplateTemplateVpcAccessArgs
+                    {
+                        NetworkInterfaces = new[]
+                        {
+                            new CloudRunV2.Inputs.JobTemplateTemplateVpcAccessNetworkInterfaceArgs
+                            {
+                                Network = network.Name,
+                                Subnetwork = subnet.Name,
+                            }
+                        },
+                        Egress = "PRIVATE_RANGES_ONLY",
+                    },
+                    Containers = new[]
+                    {
+                        new CloudRunV2.Inputs.JobTemplateTemplateContainerArgs
+                        {
+                            Image = $"{imageBase}/migrate:{imageTag}",
+                            Envs = new[]
+                            {
+                                JobSecretEnv("ConnectionStrings__Postgres", dbConnStrSecret),
                             },
                             Resources = new CloudRunV2.Inputs.JobTemplateTemplateContainerResourcesArgs
                             {

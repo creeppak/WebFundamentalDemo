@@ -1,0 +1,71 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGION: europe-central2
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - run: dotnet restore
+      - run: dotnet build --no-restore --configuration Release
+      - run: dotnet test --no-build --configuration Release
+
+  push-images:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+
+      - name: Build and push api
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          SHA="${{ github.sha }}"
+          docker build -t "$REGISTRY/api:$SHA" -t "$REGISTRY/api:latest" -f src/Api/Dockerfile .
+          docker push "$REGISTRY/api:$SHA"
+          docker push "$REGISTRY/api:latest"
+
+      - name: Build and push web
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          SHA="${{ github.sha }}"
+          docker build -t "$REGISTRY/web:$SHA" -t "$REGISTRY/web:latest" -f src/Web/Dockerfile .
+          docker push "$REGISTRY/web:$SHA"
+          docker push "$REGISTRY/web:latest"
+
+      - name: Build and push worker
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          SHA="${{ github.sha }}"
+          docker build -t "$REGISTRY/worker:$SHA" -t "$REGISTRY/worker:latest" -f src/Worker/Dockerfile .
+          docker push "$REGISTRY/worker:$SHA"
+          docker push "$REGISTRY/worker:latest"
+
+      - name: Build and push migrate
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          SHA="${{ github.sha }}"
+          docker build -t "$REGISTRY/migrate:$SHA" -t "$REGISTRY/migrate:latest" -f src/Api/Dockerfile.migrate .
+          docker push "$REGISTRY/migrate:$SHA"
+          docker push "$REGISTRY/migrate:latest"

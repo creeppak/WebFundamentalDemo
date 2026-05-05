@@ -1,0 +1,63 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy (Git SHA or "latest")'
+        required: true
+        default: 'latest'
+
+env:
+  REGION: europe-central2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production   # requires approval in GitHub repo settings
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_DEPLOYER_SA }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run EF migrations
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          gcloud run jobs update webfundamentaldemo-migrate \
+            --image="$REGISTRY/migrate:${{ inputs.image_tag }}" \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT }}
+          gcloud run jobs execute webfundamentaldemo-migrate \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT }} \
+            --wait
+
+      - name: Update Api service
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          gcloud run services update webfundamentaldemo-api \
+            --image="$REGISTRY/api:${{ inputs.image_tag }}" \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT }}
+
+      - name: Update Web service
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          gcloud run services update webfundamentaldemo-web \
+            --image="$REGISTRY/web:${{ inputs.image_tag }}" \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT }}
+
+      - name: Update Worker job
+        run: |
+          REGISTRY="${{ env.REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/webfundamentaldemo"
+          gcloud run jobs update webfundamentaldemo-worker \
+            --image="$REGISTRY/worker:${{ inputs.image_tag }}" \
+            --region=${{ env.REGION }} \
+            --project=${{ vars.GCP_PROJECT }}

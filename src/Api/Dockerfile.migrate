@@ -1,0 +1,30 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+RUN dotnet tool install --global dotnet-ef --version 8.*
+ENV PATH="$PATH:/root/.dotnet/tools"
+
+COPY Directory.Build.props Directory.Packages.props ./
+COPY src/Api/Api.csproj           src/Api/
+COPY src/Worker/Worker.csproj     src/Worker/
+COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
+COPY src/Shared/Shared.csproj     src/Shared/
+RUN dotnet restore src/Api/Api.csproj
+
+COPY src/ src/
+RUN dotnet ef migrations bundle \
+    --project src/Api \
+    --startup-project src/Api \
+    --self-contained \
+    -r linux-x64 \
+    -o /app/efbundle
+
+FROM mcr.microsoft.com/dotnet/runtime-deps:8.0 AS final
+WORKDIR /app
+RUN adduser --disabled-password --no-create-home appuser
+COPY --from=build /app/efbundle .
+RUN chmod +x efbundle
+USER appuser
+# Pass the connection string from the Secret Manager env var directly to efbundle
+# so startup validation in the Api host builder is bypassed.
+ENTRYPOINT ["/bin/sh", "-c", "exec ./efbundle --connection \"$ConnectionStrings__Postgres\""]

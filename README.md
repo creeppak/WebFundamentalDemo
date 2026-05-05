@@ -219,19 +219,30 @@ pulumi up -c webfundamentaldemo:imageTag=<git-sha>
 
 ### Rollback
 
-Redeploy a previous image tag by setting it back and running `pulumi up`:
+**Preferred: re-trigger the deploy workflow** with the previous Git SHA as `image_tag`. This re-runs migrations (a no-op if schema is unchanged) and updates all services atomically.
+
+**Fast rollback without migrations** — shift traffic to the previous Cloud Run revision directly:
+
+```bash
+# List recent revisions to find the one to roll back to:
+gcloud run revisions list --service=webfundamentaldemo-api --region=europe-central2
+
+gcloud run services update-traffic webfundamentaldemo-api \
+  --region=europe-central2 \
+  --to-revisions=<previous-revision>=100
+
+gcloud run services update-traffic webfundamentaldemo-web \
+  --region=europe-central2 \
+  --to-revisions=<previous-revision>=100
+```
+
+This is instant but bypasses migrations — only safe when the schema change is backwards-compatible or hasn't been applied yet.
+
+**Full rollback via Pulumi** (if image tag in stack config needs updating):
 
 ```bash
 pulumi config set webfundamentaldemo:imageTag <previous-git-sha>
 pulumi up
-```
-
-Alternatively, use `gcloud` directly to shift traffic without a full Pulumi run:
-
-```bash
-gcloud run services update-traffic webfundamentaldemo-api \
-  --region=europe-central2 \
-  --to-revisions=<previous-revision>=100
 ```
 
 ## License
