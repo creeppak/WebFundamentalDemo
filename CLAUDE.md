@@ -28,10 +28,10 @@ Blazor client → ASP.NET API → Postgres (reads cached data)
 ## Tech Stack
 
 - **.NET 8** / C# (ASP.NET Core, Blazor WebAssembly, Worker Service)
-- **PostgreSQL** + EF Core (Npgsql provider) — containerized, single Cloud Run instance with Filestore-mounted volume for data persistence
+- **PostgreSQL** + EF Core (Npgsql provider) — Cloud SQL for PostgreSQL (`db-f1-micro`) with private IP via VPC peering
 - **Mapperly** for compile-time DTO↔domain object mapping
 - Docker + Docker Compose for local dev
-- **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud Load Balancing, Secret Manager, Filestore for Postgres data, Cloud Scheduler for Worker job)
+- **GCP Cloud Run** deployment (Cloud Run, Artifact Registry, Cloud SQL, Secret Manager, Cloud Scheduler for Worker job, Cloud Run domain mappings for HTTPS)
 - GitHub Actions for CI/CD (Workload Identity Federation auth to GCP)
 - **Anthropic Claude API** for analysis generation (`claude-sonnet-4-5`)
 - **Finnhub** for market data (fundamentals, news) — free tier covers both
@@ -86,8 +86,7 @@ dotnet test
 - Transactions for multi-step operations (e.g. buy = deduct cash + insert transaction row + update holding must be atomic). Use `IDbContextTransaction`.
 - **Migration ownership:** the `Api` project owns migrations. The `Worker` reads and writes data but does not run migrations.
 - **Do not run migrations from Api startup in production.** Run them as a one-off Cloud Run Job before deploying a new Api revision. Multiple Api instances racing on startup corrupts migration history.
-- **Postgres runs in a single Cloud Run instance with Filestore-mounted data directory.** This means only one Postgres instance may be running at a time — the Cloud Run service must be configured with `minInstances=1`, `maxInstances=1` (no concurrent revisions that would briefly run two). Deployments take Postgres offline for ~30s.
-- Filestore has higher latency than local disk. Acceptable for demo scale; do not benchmark this against Cloud SQL.
+- **Production database is Cloud SQL** (`db-f1-micro`, private IP via VPC peering). Local dev still uses Docker Postgres (see `docker-compose.yml`). Do not confuse the two connection strings.
 
 ## Authentication
 
@@ -185,16 +184,18 @@ Each job:
 
 ## GCP Deployment Shape
 
-- **Compute:** Cloud Run for all services.
+- **Compute:** Cloud Run for all services; Cloud SQL for Postgres.
 - **Services:**
-  - `Api` — Cloud Run service, `minInstances>=1`, behind Cloud Load Balancing, public HTTPS.
-  - `Web` (Blazor WASM static files) — served from a minimal Nginx container as its own Cloud Run service behind the load balancer. (Alternative: Cloud Storage + Cloud CDN for cheaper static hosting — defer this choice, but know it's an option.)
-  - `Postgres` — Cloud Run service, `minInstances=1`, `maxInstances=1`, Filestore-mounted data directory. **No rolling updates.** Deployment briefly takes Postgres offline.
+  - `Api` — Cloud Run service, `minInstances>=1`, `INGRESS_TRAFFIC_ALL`. Public HTTPS via Cloud Run domain mapping at `api.{domain}`.
+  - `Web` (Blazor WASM static files) — Nginx container as its own Cloud Run service, `minInstances=0`. Public HTTPS via Cloud Run domain mapping at `app.{domain}`.
+  - `Postgres` — **Cloud SQL for PostgreSQL** (`db-f1-micro`, 10 GB SSD). Private IP via VPC peering — not exposed to the internet. ~$9/month.
   - `Worker` — **not a Cloud Run service.** Triggered by Cloud Scheduler as a Cloud Run Job at 02:00 UTC. Runs the job chain and exits.
-- **Networking:** VPC with public and private subnets. Load balancer in public subnet, all Cloud Run services in private subnet via VPC connector. Postgres firewall rules allow traffic only from Api and Worker service accounts.
-- **Secrets:** GCP Secret Manager for DB password, JWT signing key, Anthropic API key, Finnhub API key, Alpha Vantage API key. Service accounts grant each service access to only its own secrets.
-- **Logs:** Cloud Logging per service, retention 7–14 days (demo cost).
-- **Billing alert** at $20/month. Non-negotiable — catches misconfigurations before they're expensive.
+- **Networking:** Single VPC with one subnet. Api and Worker use Direct VPC Egress (`PRIVATE_RANGES_ONLY`) to reach the Cloud SQL private IP. No separate load balancer — Cloud Run domain mappings handle HTTPS termination for free.
+- **HTTPS / custom domains:** Cloud Run domain mappings provide Google-managed TLS certificates at no extra cost. DNS records are CNAME → `ghs.googlehosted.com`. Prerequisite: verify domain ownership in Google Search Console before first `pulumi up`.
+- **Auth cookies across subdomains:** The refresh token cookie must be set with `Domain=.{domain}` so it is sent from `app.{domain}` to `api.{domain}`. Both share the same eTLD+1, so `SameSite=Strict` is honoured.
+- **Secrets:** GCP Secret Manager for JWT signing key, Anthropic API key, Finnhub API key, Alpha Vantage API key, and DB connection string. The connection string is written by Pulumi automatically (Cloud SQL private IP + password). Service accounts grant each service access to only its own secrets.
+- **Logs:** Cloud Logging per service, retention 14 days (custom log bucket).
+- **Billing alert** at $20/month. Non-negotiable — catches misconfigurations before they're expensive. Estimated cost: ~$15/month.
 - **Infrastructure-as-code:** Pulumi in C# keeps the stack in the same language as the app. Do not provision GCP resources by hand in the console beyond the initial project bootstrap.
 
 ## CI/CD

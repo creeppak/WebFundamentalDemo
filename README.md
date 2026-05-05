@@ -13,15 +13,15 @@ A virtual stock trading demo platform. Users register, receive a virtual cash ba
 | `src/Web` | Blazor WebAssembly client |
 | `src/Shared` | DTOs and shared contracts |
 
-**Data flow:** Nightly Worker jobs → Finnhub + Alpha Vantage + Claude API → PostgreSQL ← ASP.NET API ← Blazor client
+**Data flow:** Nightly Worker jobs → Finnhub + Alpha Vantage + Claude API → Cloud SQL (PostgreSQL) ← ASP.NET API ← Blazor client
 
 ## Tech Stack
 
 - .NET 8 / C# (ASP.NET Core, Blazor WASM, Worker Service)
-- PostgreSQL + EF Core (Npgsql)
+- PostgreSQL + EF Core (Npgsql) — Cloud SQL `db-f1-micro` in production, Docker in local dev
 - Mapperly (compile-time DTO↔domain mapping)
 - Docker / Docker Compose
-- GCP Cloud Run + Artifact Registry + Cloud Load Balancing + Secret Manager + Filestore
+- GCP Cloud Run + Artifact Registry + Cloud SQL + Secret Manager + Cloud Scheduler + Cloud Run domain mappings
 - GitHub Actions (CI/CD, Workload Identity Federation auth to GCP)
 - Anthropic Claude API (`claude-sonnet-4-5`)
 - Finnhub (fundamentals, news)
@@ -137,11 +137,11 @@ Alpha Vantage does not return HTTP 429 on rate limit — it returns HTTP 200 wit
 
 ## Deployment
 
-Deployed to GCP Cloud Run. See `infra/` for Pulumi stack (C#).
+Deployed to GCP. See `infra/` for Pulumi stack (C#). Estimated cost: ~$15/month.
 
-- **Api** — Cloud Run service behind Cloud Load Balancing, public HTTPS
-- **Web** — Nginx container serving Blazor WASM static files
-- **Postgres** — Cloud Run service, single instance, Filestore-mounted data directory
+- **Api** — Cloud Run service, public HTTPS via Cloud Run domain mapping (`api.{domain}`)
+- **Web** — Nginx container serving Blazor WASM static files, Cloud Run domain mapping (`app.{domain}`)
+- **Postgres** — Cloud SQL `db-f1-micro`, private IP via VPC peering (no public exposure)
 - **Worker** — Cloud Scheduler triggers a Cloud Run Job at 02:00 UTC nightly
 
 CI/CD via GitHub Actions (Workload Identity Federation, no long-lived keys). Migrations run as a one-off Cloud Run Job before Api deploy.

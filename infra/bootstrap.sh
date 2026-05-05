@@ -42,11 +42,11 @@ gcloud services enable \
     run.googleapis.com \
     artifactregistry.googleapis.com \
     secretmanager.googleapis.com \
-    file.googleapis.com \
+    sqladmin.googleapis.com \
+    servicenetworking.googleapis.com \
     cloudscheduler.googleapis.com \
     compute.googleapis.com \
     dns.googleapis.com \
-    vpcaccess.googleapis.com \
     iam.googleapis.com \
     iamcredentials.googleapis.com \
     billingbudgets.googleapis.com \
