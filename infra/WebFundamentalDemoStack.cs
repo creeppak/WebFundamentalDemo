@@ -182,7 +182,6 @@ class WebFundamentalDemoStack : Stack
         {
             Location = region,
             Ingress = "INGRESS_TRAFFIC_ALL",
-            DeletionProtection = false,
             Template = new CloudRunV2.Inputs.ServiceTemplateArgs
             {
                 ServiceAccount = apiSa.Email,
@@ -257,7 +256,6 @@ class WebFundamentalDemoStack : Stack
         {
             Location = region,
             Ingress = "INGRESS_TRAFFIC_ALL",
-            DeletionProtection = false,
             Template = new CloudRunV2.Inputs.ServiceTemplateArgs
             {
                 Scaling = new CloudRunV2.Inputs.ServiceTemplateScalingArgs
@@ -281,7 +279,7 @@ class WebFundamentalDemoStack : Stack
                         {
                             SvcEnv("API_BASE_URL", $"https://{apiDomain}"),
                         },
-                        Resources = SvcResources("1", "256Mi"),
+                        Resources = SvcResources("1", "512Mi"),
                     }
                 },
             },
@@ -301,7 +299,6 @@ class WebFundamentalDemoStack : Stack
         var workerJob = new CloudRunV2.Job("worker", new()
         {
             Location = region,
-            DeletionProtection = false,
             Template = new CloudRunV2.Inputs.JobTemplateArgs
             {
                 Template = new CloudRunV2.Inputs.JobTemplateTemplateArgs

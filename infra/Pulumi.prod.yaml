@@ -1,0 +1,8 @@
+config:
+  gcp:project: webfundamentaldemo-495314
+  gcp:region: europe-central2
+  webfundamentaldemo:domain: onelwfd.xyz
+  webfundamentaldemo:imageTag: latest
+  # Set via: pulumi config set --secret dbPassword "your-password"
+  webfundamentaldemo:dbPassword:
+    secure: AAABAJeVnda7EumDnFHMTWJETCxoX1w/WEHaL25W62GQJkVQJ0M/xmyKl95RFBK+3drGjejOkkxGHKceAivBfQaW29RWpUObJkyY4A==
