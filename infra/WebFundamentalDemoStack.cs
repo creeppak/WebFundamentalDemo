@@ -167,7 +167,7 @@ class WebFundamentalDemoStack : Stack
         var dbConnStr = Output.Tuple(sqlInstance.PrivateIpAddress, dbPassword)
             .Apply(t => $"Host={t.Item1};Port=5432;Database=webfundamentaldemo;Username=postgres;Password={t.Item2}");
 
-        _ = new SecretManager.SecretVersion("db-connection-string-version", new()
+        var dbConnStrVersion = new SecretManager.SecretVersion("db-connection-string-version", new()
         {
             Secret = dbConnStrSecret.Id,
             SecretData = dbConnStr,
@@ -240,7 +240,7 @@ class WebFundamentalDemoStack : Stack
                     }
                 },
             },
-        });
+        }, new CustomResourceOptions { DependsOn = new[] { dbConnStrVersion } });
 
         _ = new CloudRunV2.ServiceIamMember("api-public", new()
         {
@@ -345,7 +345,7 @@ class WebFundamentalDemoStack : Stack
                     },
                 },
             },
-        });
+        }, new CustomResourceOptions { DependsOn = new[] { dbConnStrVersion } });
 
         // ── Cloud Run Job: DB Migrations ──────────────────────────────────────
         //
@@ -396,7 +396,7 @@ class WebFundamentalDemoStack : Stack
                     },
                 },
             },
-        });
+        }, new CustomResourceOptions { DependsOn = new[] { dbConnStrVersion } });
 
         // ── Cloud Scheduler: nightly Worker trigger ───────────────────────────
 
