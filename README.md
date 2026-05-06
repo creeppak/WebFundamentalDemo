@@ -94,8 +94,8 @@ dotnet user-secrets set "AlphaVantage:ApiKey"   "<key>" --project src/Worker
 ### Migrations
 
 ```bash
-dotnet ef migrations add <Name> --project src/Api --startup-project src/Api
-dotnet ef database update --project src/Api
+dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Api
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
 ```
 
 Always review generated migrations before committing.

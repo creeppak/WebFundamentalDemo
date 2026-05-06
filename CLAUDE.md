@@ -55,8 +55,8 @@ docker compose up --build
 
 **Migrations:**
 ```bash
-dotnet ef migrations add <Name> --project src/Api --startup-project src/Api
-dotnet ef database update --project src/Api
+dotnet ef migrations add <Name> --project src/Infrastructure --startup-project src/Api
+dotnet ef database update --project src/Infrastructure --startup-project src/Api
 ```
 
 Always review generated migrations before committing — EF Core sometimes produces destructive diffs.

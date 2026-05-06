@@ -5,16 +5,17 @@ RUN dotnet tool install --global dotnet-ef --version 8.*
 ENV PATH="$PATH:/root/.dotnet/tools"
 
 COPY Directory.Build.props Directory.Packages.props ./
-COPY src/Api/Api.csproj           src/Api/
-COPY src/Worker/Worker.csproj     src/Worker/
-COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
-COPY src/Shared/Shared.csproj     src/Shared/
-RUN dotnet restore src/Api/Api.csproj
+COPY src/Api/Api.csproj                        Api/
+COPY src/Infrastructure/Infrastructure.csproj  Infrastructure/
+COPY src/Shared/Shared.csproj                  Shared/
+RUN dotnet restore Api/Api.csproj
 
-COPY src/ src/
+COPY src/Api/            Api/
+COPY src/Infrastructure/ Infrastructure/
+COPY src/Shared/         Shared/
 RUN dotnet ef migrations bundle \
-    --project src/Api \
-    --startup-project src/Api \
+    --project Infrastructure \
+    --startup-project Api \
     --self-contained \
     -r linux-x64 \
     -o /app/efbundle
