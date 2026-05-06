@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
+COPY Directory.Build.props Directory.Packages.props ./
 COPY src/Worker/Worker.csproj     src/Worker/
 COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
 COPY src/Shared/Shared.csproj     src/Shared/

@@ -3,6 +3,7 @@ WORKDIR /src
 
 # Copy project files first so restore layer is cached independently of source changes.
 # Api references Worker, Infrastructure, and Shared.
+COPY Directory.Build.props Directory.Packages.props ./
 COPY src/Api/Api.csproj           src/Api/
 COPY src/Worker/Worker.csproj     src/Worker/
 COPY src/Infrastructure/Infrastructure.csproj src/Infrastructure/
