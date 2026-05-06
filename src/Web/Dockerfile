@@ -5,7 +5,6 @@ COPY Directory.Build.props Directory.Packages.props ./
 COPY src/Web/Web.csproj       Web/
 COPY src/Shared/Shared.csproj Shared/
 RUN dotnet restore Web/Web.csproj
-RUN dotnet workload install wasm-tools
 
 COPY src/Web/    Web/
 COPY src/Shared/ Shared/
