@@ -82,10 +82,13 @@ The Worker is excluded from the default `docker compose up` because it runs the 
 Use .NET user secrets — never commit API keys:
 
 ```bash
-dotnet user-secrets set "Jwt:SigningKey"        "<key>" --project src/Api
-dotnet user-secrets set "Anthropic:ApiKey"     "<key>" --project src/Worker
-dotnet user-secrets set "Finnhub:ApiKey"       "<key>" --project src/Worker
-dotnet user-secrets set "AlphaVantage:ApiKey"  "<key>" --project src/Worker
+# Api
+dotnet user-secrets set "Jwt:SigningKey"         "<key>" --project src/Api
+
+# Worker
+dotnet user-secrets set "Anthropic:ApiKey"      "<key>" --project src/Worker
+dotnet user-secrets set "Finnhub:ApiKey"        "<key>" --project src/Worker
+dotnet user-secrets set "AlphaVantage:ApiKey"   "<key>" --project src/Worker
 ```
 
 ### Migrations

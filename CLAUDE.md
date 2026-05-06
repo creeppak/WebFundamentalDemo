@@ -156,7 +156,7 @@ Each job:
 - Is **idempotent** — running twice in one day must not corrupt data. Upsert, don't insert blindly.
 - Continues through per-ticker failures — one bad ticker does not fail the batch.
 
-**Manual trigger:** admin-only API endpoint to run any job (or the full chain) on demand. This is the primary way to run jobs locally — do not skip this.
+**Manual trigger (local):** run the Worker directly — `dotnet run --project src/Worker` or `docker compose run --rm worker`. The Worker runs the full job chain and exits. There is no in-API admin endpoint.
 
 ## Trading Logic
 
@@ -214,6 +214,11 @@ Each job:
 - Prod: GCP Secret Manager, loaded at container startup
 - **Never** commit `appsettings.Production.json` with real values
 - **Never** hardcode API keys, connection strings, or JWT signing keys
+
+Secrets by service:
+- **Api** — `Jwt:SigningKey` only. Connection string is in `appsettings.Development.json` for local dev; Secret Manager in prod.
+- **Worker** — `Anthropic:ApiKey`, `Finnhub:ApiKey`, `AlphaVantage:ApiKey`. Connection string same as above.
+- Api does **not** need and must not be given market data or Anthropic API keys.
 
 ## Git Conventions
 
