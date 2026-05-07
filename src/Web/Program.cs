@@ -21,16 +21,14 @@ builder.Services.AddAuthorizationCore();
 
 builder.Services.AddTransient<AuthorizationMessageHandler>();
 
-// In development the API runs on a different port (cross-origin), so cookies are not
-// sent by default. CookieCredentialsHandler sets credentials:include on AuthClient
-// requests so the HttpOnly refresh-token cookie is sent and Set-Cookie is accepted.
-// In production Web and API share the same origin, so this handler is not needed.
-var authClientBuilder = builder.Services.AddHttpClient<AuthClient>(c => c.BaseAddress = new Uri(apiBaseUrl));
-if (builder.HostEnvironment.IsDevelopment())
-{
-    builder.Services.AddTransient<CookieCredentialsHandler>();
-    authClientBuilder.AddHttpMessageHandler<CookieCredentialsHandler>();
-}
+// CookieCredentialsHandler sets credentials:include on AuthClient requests so the browser
+// sends the HttpOnly refresh-token cookie and accepts Set-Cookie responses. Required in
+// both dev (different port = different origin) and prod (app.{domain} vs api.{domain} =
+// different origin despite sharing the same eTLD+1).
+builder.Services.AddTransient<CookieCredentialsHandler>();
+builder.Services
+    .AddHttpClient<AuthClient>(c => c.BaseAddress = new Uri(apiBaseUrl))
+    .AddHttpMessageHandler<CookieCredentialsHandler>();
 
 // All other clients attach the Bearer token and auto-refresh on 401.
 builder.Services.AddHttpClient<StocksClient>(c => c.BaseAddress = new Uri(apiBaseUrl))
