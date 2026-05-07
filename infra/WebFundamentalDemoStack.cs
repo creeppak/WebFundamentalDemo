@@ -79,6 +79,12 @@ class WebFundamentalDemoStack : Stack
             DisplayName = "WebFundamentalDemo DB Migration",
         });
 
+        var webSa = new ServiceAccount.Account("web-sa", new()
+        {
+            AccountId = "webfundamentaldemo-web",
+            DisplayName = "WebFundamentalDemo Web",
+        });
+
         var schedulerSa = new ServiceAccount.Account("scheduler-sa", new()
         {
             AccountId = "webfundamentaldemo-scheduler",
@@ -111,6 +117,12 @@ class WebFundamentalDemoStack : Stack
         _ = new ServiceAccount.IAMMember("deployer-actAs-api", new ServiceAccount.IAMMemberArgs
         {
             ServiceAccountId = apiSa.Name,
+            Role = "roles/iam.serviceAccountUser",
+            Member = $"serviceAccount:{deployerSaEmail}",
+        });
+        _ = new ServiceAccount.IAMMember("deployer-actAs-web", new ServiceAccount.IAMMemberArgs
+        {
+            ServiceAccountId = webSa.Name,
             Role = "roles/iam.serviceAccountUser",
             Member = $"serviceAccount:{deployerSaEmail}",
         });
@@ -282,6 +294,7 @@ class WebFundamentalDemoStack : Stack
             Ingress = "INGRESS_TRAFFIC_ALL",
             Template = new CloudRunV2.Inputs.ServiceTemplateArgs
             {
+                ServiceAccount = webSa.Email,
                 Scaling = new CloudRunV2.Inputs.ServiceTemplateScalingArgs
                 {
                     MinInstanceCount = 0,
