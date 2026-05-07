@@ -26,6 +26,7 @@ RUN adduser --disabled-password --no-create-home appuser
 COPY --from=build /app/efbundle .
 RUN chmod +x efbundle
 USER appuser
+ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 # Pass the connection string from the Secret Manager env var directly to efbundle
 # so startup validation in the Api host builder is bypassed.
 ENTRYPOINT ["/bin/sh", "-c", "exec ./efbundle --connection \"$ConnectionStrings__Postgres\""]
