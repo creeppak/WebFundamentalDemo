@@ -9,7 +9,7 @@ on:
         default: 'latest'
 
 env:
-  REGION: europe-central2
+  REGION: europe-west1
 
 jobs:
   deploy:
