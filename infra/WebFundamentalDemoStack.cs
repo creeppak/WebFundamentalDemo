@@ -28,6 +28,7 @@ class WebFundamentalDemoStack : Stack
         var domain = config.Require("domain");       // root domain, e.g. "yourdomain.com"
         var imageTag = config.Get("imageTag") ?? "latest";
         var dbPassword = config.RequireSecret("dbPassword");
+        var deployerSaEmail = config.Require("deployerSaEmail");
         var imageBase = $"{region}-docker.pkg.dev/{project}/webfundamentaldemo";
 
         var apiDomain = $"api.{domain}";
@@ -104,6 +105,27 @@ class WebFundamentalDemoStack : Stack
         GrantSecretAccess("anthropic-key-to-worker", anthropicKeySecret, workerSa.Email);
         GrantSecretAccess("finnhub-key-to-worker", finnhubKeySecret, workerSa.Email);
         GrantSecretAccess("alpha-vantage-key-to-worker", alphaVantageKeySecret, workerSa.Email);
+
+        // The deployer SA needs actAs on each workload SA to update Cloud Run
+        // services/jobs that run as those accounts.
+        _ = new ServiceAccount.IAMMember("deployer-actAs-api", new ServiceAccount.IAMMemberArgs
+        {
+            ServiceAccountId = apiSa.Name,
+            Role = "roles/iam.serviceAccountUser",
+            Member = $"serviceAccount:{deployerSaEmail}",
+        });
+        _ = new ServiceAccount.IAMMember("deployer-actAs-migrate", new ServiceAccount.IAMMemberArgs
+        {
+            ServiceAccountId = migrateSa.Name,
+            Role = "roles/iam.serviceAccountUser",
+            Member = $"serviceAccount:{deployerSaEmail}",
+        });
+        _ = new ServiceAccount.IAMMember("deployer-actAs-worker", new ServiceAccount.IAMMemberArgs
+        {
+            ServiceAccountId = workerSa.Name,
+            Role = "roles/iam.serviceAccountUser",
+            Member = $"serviceAccount:{deployerSaEmail}",
+        });
 
         // ── Cloud SQL (PostgreSQL) ────────────────────────────────────────────
         //

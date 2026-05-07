@@ -1,6 +1,7 @@
 config:
   gcp:project: webfundamentaldemo-495314
   gcp:region: europe-west1
+  webfundamentaldemo:deployerSaEmail: webfundamentaldemo-deployer@webfundamentaldemo-495314.iam.gserviceaccount.com
   webfundamentaldemo:domain: onelwfd.xyz
   webfundamentaldemo:imageTag: latest
   # Set via: pulumi config set --secret dbPassword "your-password"
