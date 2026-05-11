@@ -95,15 +95,14 @@ public class AlphaVantagePriceProviderTests
     }
 
     [Fact]
-    public async Task GetPricesAsync_RateLimitResponse_ReturnsEmpty()
+    public async Task GetPricesAsync_RateLimitExhausted_ThrowsAlphaVantageRateLimitException()
     {
         // Alpha Vantage signals rate limits via a 200 with an "Information" field, not a 429.
         var provider = BuildProvider(HttpStatusCode.OK,
             """{"Information": "Thank you for using Alpha Vantage! Our standard API call frequency is 25 requests per day."}""");
 
-        var bars = await provider.GetPricesAsync(Ticker, From, To, CancellationToken.None);
-
-        Assert.Empty(bars);
+        await Assert.ThrowsAsync<AlphaVantageRateLimitException>(() =>
+            provider.GetPricesAsync(Ticker, From, To, CancellationToken.None));
     }
 
     [Fact]

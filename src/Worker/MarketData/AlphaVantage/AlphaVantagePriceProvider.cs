@@ -25,12 +25,7 @@ public class AlphaVantagePriceProvider(
             if (response?.Information is not null || response?.Note is not null)
             {
                 if (attempt == MaxRateLimitRetries)
-                {
-                    logger.LogError(
-                        "Alpha Vantage rate limit still active for {Ticker} after {Retries} retries — giving up",
-                        ticker, MaxRateLimitRetries);
-                    return [];
-                }
+                    throw new AlphaVantageRateLimitException(ticker, MaxRateLimitRetries);
 
                 logger.LogWarning(
                     "Alpha Vantage rate limit reached for {Ticker} — waiting {Delay}s before retry ({Attempt}/{Max})",
