@@ -22,8 +22,16 @@ public class AlphaVantagePriceProvider(
             if (response?.TimeSeries is not null)
                 break;
 
-            if (response?.Information is not null || response?.Note is not null)
+            if (response?.Information is not null)
             {
+                // Daily request limit (25 req/day on the free tier). Resets at midnight —
+                // retrying after 65s won't help. Throw immediately and abort the batch.
+                throw new AlphaVantageRateLimitException(ticker, 0);
+            }
+
+            if (response?.Note is not null)
+            {
+                // Per-minute throttle (paid/legacy tiers). A short wait and retry is worthwhile.
                 if (attempt == MaxRateLimitRetries)
                     throw new AlphaVantageRateLimitException(ticker, MaxRateLimitRetries);
 
