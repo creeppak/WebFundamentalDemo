@@ -2,6 +2,8 @@
 
 A virtual stock trading demo platform. Users register, receive a virtual cash balance, and can buy/sell a curated set of stocks. Each stock page shows fundamentals, a 14-day price chart, and an AI-generated fundamental analysis.
 
+![Demo](https://github.com/creeppak/WebFundamentalDemo/releases/download/media/demo0_1.gif)
+
 > **Disclaimer:** This is a demo project using virtual currency. All AI-generated analyses are not financial advice.
 
 ## Architecture
