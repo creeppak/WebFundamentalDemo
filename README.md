@@ -4,6 +4,8 @@ A virtual stock trading demo platform. Users register, receive a virtual cash ba
 
 ![Demo](https://github.com/creeppak/WebFundamentalDemo/releases/download/media/demo0_1.gif)
 
+**Live demo:** [app.onelwfd.xyz](https://app.onelwfd.xyz)
+
 > **Disclaimer:** This is a demo project using virtual currency. All AI-generated analyses are not financial advice.
 
 ## Architecture
