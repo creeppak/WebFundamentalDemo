@@ -47,9 +47,15 @@ public class PriceSyncJob(
                     "PriceSyncJob starting: {TickerCount} tickers, {From}–{To}",
                     tickers.Count, from, to);
 
+                var isFirst = true;
                 foreach (var ticker in tickers)
                 {
                     ct.ThrowIfCancellationRequested();
+
+                    if (!isFirst)
+                        await Task.Delay(TimeSpan.FromSeconds(15), ct);
+                    isFirst = false;
+
                     try
                     {
                         await SyncTickerAsync(ticker, from, to, ct);

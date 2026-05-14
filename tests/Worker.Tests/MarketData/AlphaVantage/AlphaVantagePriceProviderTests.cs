@@ -21,8 +21,7 @@ public class AlphaVantagePriceProviderTests
         };
         return new AlphaVantagePriceProvider(
             new AlphaVantageHttpClient(httpClient),
-            NullLogger<AlphaVantagePriceProvider>.Instance,
-            rateLimitDelay: TimeSpan.Zero);
+            NullLogger<AlphaVantagePriceProvider>.Instance);
     }
 
     [Fact]
